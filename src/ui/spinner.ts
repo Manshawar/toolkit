@@ -1,11 +1,16 @@
 /**
- * CLI 等待动画：blessed 小卡片画猫猫动耳朵。
+ * CLI 等待动画：
+ * - createSpinner / withSpinner：ora 行内（collect / commit / push）
+ * - createCatRun / withCatRun：颜文字小猫循环 + 往前跑（AI analyze）
  *
- * blessed 会进备用屏（像 vim），结束 destroy 后原命令行内容会回来；
- * 卡片只占底部一小块，不是铺满业务 UI。
+ * 颜文字参考：https://symboldb.org/zh/kaomoji/cat-kaomoji/
+ *
+ * ```ts
+ * await withCatRun('analyze', async (spin) => { … })
+ * ```
  */
-import blessed from 'blessed'
 import chalk from 'chalk'
+import ora, { type Ora } from 'ora'
 
 export type SpinnerStatus = 'idle' | 'running' | 'success' | 'error' | 'cancel'
 
@@ -22,8 +27,48 @@ export interface SpinnerOptions {
   quiet?: boolean
 }
 
-/** 耳朵帧 */
-const EAR_FRAMES = ['∧＿∧', '∩＿∩', '∧＿∧', '／￣＼'] as const
+export const CAT_FACE = '(=^･ω･^=)'
+
+/**
+ * 小猫颜文字帧（经典 + 表情），循环切换看起来在动。
+ * @see https://symboldb.org/zh/kaomoji/cat-kaomoji/
+ */
+const CAT_KAOMOJI = [
+  '(=^･ω･^=)',
+  '(=^･ｪ･^=)',
+  '(=ΦωΦ=)',
+  '(=◕ω◕=)',
+  '(=・ω・=)',
+  '(=^∇^=)',
+  '(=①ω①=)',
+  '(=✪ω✪=)',
+  '(=●ω●=)',
+  '(=⌒‿‿⌒=)',
+  '(=´∇｀=)',
+  '(=✧ω✧=)',
+  '(=♡ω♡=)',
+  '(=^▽^=)',
+  '(=￣ω￣=)',
+  '(=ﾟωﾟ=)',
+]
+
+/** 颜文字轮播 + 水平位移 → 往前跑 */
+function buildKaomojiRunFrames(track: number): string[] {
+  const maxFace = Math.max(...CAT_KAOMOJI.map((s) => s.length))
+  const frames: string[] = []
+  for (let i = 0; i < track; i++) {
+    const face = CAT_KAOMOJI[i % CAT_KAOMOJI.length]
+    const left = ' '.repeat(i)
+    const right = ' '.repeat(track - 1 - i + (maxFace - face.length))
+    frames.push(`${left}${face}${right}`)
+  }
+  return frames
+}
+
+const ORA_SPINNER = {
+  interval: 120,
+  frames: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
+}
 
 function shouldQuiet(explicit?: boolean): boolean {
   if (explicit != null) return explicit
@@ -54,44 +99,103 @@ function noopSpinner(): Spinner {
   }
 }
 
-function escapeTag(s: string): string {
-  return s.replace(/[{}]/g, '')
-}
-
-function createBlessedCatSpinner(label: string): Spinner {
+function createOraSpinner(label: string): Spinner {
   let status: SpinnerStatus = 'idle'
   let current = label
-  let screen: blessed.Widgets.Screen | null = null
-  let box: blessed.Widgets.BoxElement | null = null
-  let timer: ReturnType<typeof setInterval> | null = null
-  let tick = 0
-  let startedAt = 0
+  let inner: Ora | null = null
 
-  const paint = () => {
-    if (!box || !screen) return
-    const ears = EAR_FRAMES[tick % EAR_FRAMES.length]
-    const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1)
-    box.setContent(
-      [
-        `{center}{magenta-fg}${ears}{/}{/center}`,
-        `{center}{magenta-fg}( ̳• · • ̳){/}{/center}`,
-        `{center}{cyan-fg}${escapeTag(current)}{/}{/center}`,
-        `{center}{gray-fg}${elapsed}s · 耳朵动起来{/}{/center}`,
-      ].join('\n'),
-    )
-    screen.render()
-    tick++
+  const ensure = () => {
+    if (inner) return inner
+    inner = ora({
+      text: chalk.cyan(current),
+      spinner: ORA_SPINNER,
+      color: 'magenta',
+      discardStdin: false,
+    })
+    return inner
   }
 
-  const teardown = () => {
+  return {
+    get status() {
+      return status
+    },
+    start(message) {
+      if (status === 'running') {
+        if (message) {
+          current = message
+          inner?.start(chalk.cyan(current))
+        }
+        return
+      }
+      current = message ?? current
+      status = 'running'
+      ensure().start(chalk.cyan(current))
+    },
+    update(message) {
+      current = message
+      if (status === 'running' && inner) inner.text = chalk.cyan(current)
+    },
+    succeed(message) {
+      const text = message ?? current
+      status = 'success'
+      if (inner) {
+        inner.succeed(`${chalk.magenta(CAT_FACE)} ${chalk.green(text)}`)
+        inner = null
+      } else {
+        console.log(`${chalk.magenta(CAT_FACE)} ${chalk.green(`✔ ${text}`)}`)
+      }
+    },
+    fail(message) {
+      const text = message ?? current
+      status = 'error'
+      if (inner) {
+        inner.fail(`${chalk.magenta('(=；ω；=)')} ${chalk.red(text)}`)
+        inner = null
+      } else {
+        console.log(`${chalk.magenta('(=；ω；=)')} ${chalk.red(`✖ ${text}`)}`)
+      }
+    },
+    cancel(message) {
+      const text = message ?? current
+      status = 'cancel'
+      if (inner) {
+        inner.warn(`${chalk.magenta('(=￣ω￣=)')} ${chalk.yellow(text)}`)
+        inner = null
+      } else {
+        console.log(`${chalk.magenta('(=￣ω￣=)')} ${chalk.yellow(`■ ${text}`)}`)
+      }
+    },
+  }
+}
+
+/**
+ * 单独空一行：小猫颜文字轮播并往前跑。
+ * 结束后清掉该行，再打印结果颜文字。
+ */
+function createCatRunSpinner(label: string): Spinner {
+  let status: SpinnerStatus = 'idle'
+  let current = label
+  let timer: ReturnType<typeof setInterval> | null = null
+  let frame = 0
+  const cols = process.stdout.columns ?? 80
+  const maxFace = Math.max(...CAT_KAOMOJI.map((s) => s.length))
+  const track = Math.max(8, Math.min(24, cols - maxFace - 2))
+  const frames = buildKaomojiRunFrames(track)
+
+  const clearLine = () => {
+    const w = process.stdout.columns ?? 80
+    process.stdout.write(`\r${' '.repeat(w)}\r`)
+  }
+
+  const paint = () => {
+    process.stdout.write(`\r${chalk.magenta(frames[frame % frames.length])}`)
+    frame++
+  }
+
+  const stopTimer = () => {
     if (timer) {
       clearInterval(timer)
       timer = null
-    }
-    if (screen) {
-      screen.destroy()
-      screen = null
-      box = null
     }
   }
 
@@ -106,81 +210,46 @@ function createBlessedCatSpinner(label: string): Spinner {
       }
       current = message ?? current
       status = 'running'
-      startedAt = Date.now()
-      tick = 0
-
-      screen = blessed.screen({
-        smartCSR: true,
-        fullUnicode: true,
-        warnings: false,
-        // 备用屏：结束后恢复原终端内容
-        title: 'tkt',
-      })
-
-      // 半透明感：整屏只留底色，猫猫卡片贴底部中央
-      blessed.box({
-        parent: screen,
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        style: { bg: 'black' },
-      })
-
-      box = blessed.box({
-        parent: screen,
-        bottom: 1,
-        left: 'center',
-        width: 36,
-        height: 8,
-        padding: { left: 1, right: 1, top: 0, bottom: 0 },
-        tags: true,
-        border: { type: 'line' },
-        label: ' {magenta-fg}(=^･ω･^=){/} ',
-        style: {
-          fg: 'white',
-          bg: 'black',
-          border: { fg: 'magenta' },
-          label: { fg: 'magenta' },
-        },
-      })
-
-      screen.key(['escape', 'q', 'C-c'], () => {
-        teardown()
-        status = 'cancel'
-        process.exit(130)
-      })
-
-      timer = setInterval(paint, 160)
+      process.stdout.write('\n')
       paint()
+      timer = setInterval(paint, 140)
     },
     update(message) {
       current = message
     },
     succeed(message) {
       const text = message ?? current
-      teardown()
       status = 'success'
-      console.log(`${chalk.magenta('(=^･ω･^=)')} ${chalk.green(`✔ ${text}`)}`)
+      stopTimer()
+      clearLine()
+      console.log(`${chalk.magenta(CAT_FACE)} ${chalk.green(`✔ ${text}`)}`)
     },
     fail(message) {
       const text = message ?? current
-      teardown()
       status = 'error'
-      console.log(`${chalk.magenta('(;-_-;)')} ${chalk.red(`✖ ${text}`)}`)
+      stopTimer()
+      clearLine()
+      console.log(`${chalk.magenta('(=；ω；=)')} ${chalk.red(`✖ ${text}`)}`)
     },
     cancel(message) {
       const text = message ?? current
-      teardown()
       status = 'cancel'
-      console.log(`${chalk.magenta('(=ｘェｘ=)')} ${chalk.yellow(`■ ${text}`)}`)
+      stopTimer()
+      clearLine()
+      console.log(`${chalk.magenta('(=￣ω￣=)')} ${chalk.yellow(`■ ${text}`)}`)
     },
   }
 }
 
 export function createSpinner(label = '', opts: SpinnerOptions = {}): Spinner {
   if (shouldQuiet(opts.quiet)) return noopSpinner()
-  return createBlessedCatSpinner(label)
+  return createOraSpinner(label)
+}
+
+/** AI 分析用：颜文字小猫往前跑 */
+export function createCatRun(label = '', opts: SpinnerOptions = {}): Spinner {
+  if (shouldQuiet(opts.quiet)) return noopSpinner()
+  return createCatRunSpinner(label)
 }
 
 export async function withSpinner<T>(
@@ -189,6 +258,26 @@ export async function withSpinner<T>(
   opts: SpinnerOptions = {},
 ): Promise<T> {
   const spin = createSpinner(label, opts)
+  spin.start()
+  try {
+    const result = await fn(spin)
+    if (spin.status === 'running') spin.succeed(label)
+    return result
+  } catch (e) {
+    if (spin.status === 'running') {
+      const msg = e instanceof Error ? e.message : String(e)
+      spin.fail(`${label}: ${msg}`)
+    }
+    throw e
+  }
+}
+
+export async function withCatRun<T>(
+  label: string,
+  fn: (spin: Spinner) => Promise<T>,
+  opts: SpinnerOptions = {},
+): Promise<T> {
+  const spin = createCatRun(label, opts)
   spin.start()
   try {
     const result = await fn(spin)

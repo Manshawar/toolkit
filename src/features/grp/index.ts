@@ -1,5 +1,5 @@
 /** Gerrit：HEAD:refs/for/<branch> */
-import { createGit, currentBranch, pushOrigin } from '../../lib/git'
+import { createGit, currentBranch, pushOrigin } from '../../core/git'
 
 export async function runGrp(cwd = process.cwd()): Promise<void> {
   const git = createGit(cwd)

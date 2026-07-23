@@ -1,5 +1,5 @@
 /** 编排：pull → conflict → diff → history → analyze → commit → push */
-import { createGit, currentBranch, ensureRepo, listRemotes } from '../../lib/git'
+import { createGit, currentBranch, ensureRepo, listRemotes } from '../../core/git'
 import { stepAnalyze } from './analyze'
 import { stepConflict, stepDiff, stepHistory } from './collect'
 import { stepCommit } from './commit'
