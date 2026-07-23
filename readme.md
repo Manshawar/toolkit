@@ -1,19 +1,58 @@
 # toolkit
 
-个人 CLI，命令前缀 `tkt`。
+个人 CLI，前缀 `tkt`。
+
+## 双环
+
+| 环 | 命令 | AI |
+| --- | --- | --- |
+| 本地 | `tkt gc` | Vercel AI SDK（`generateText` + `Output.object`） |
+| Skill | `tkt agent git-submit prepare \| apply` | 宿主 Agent；CLI 只校验+执行 |
+
+```bash
+# 本地（启动时询问是否自动推送）
+tkt gc
+
+# 跳过询问
+tkt gc --push      # 自动推送
+tkt gc --no-push   # 只 commit 不推送
+
+# AI 配置（空回车保留原值）
+tkt config
+tkt config --show
+
+# Skill
+tkt agent git-submit prepare
+tkt prompt show git-submit.commit-plan
+tkt agent git-submit apply --plan-file plan.json
+```
+
+## 其它
 
 | 命令 | 功能 |
 | --- | --- |
-| `tkt sv [nodeVersion]` | fnm 切 Node 后 `npm run serve`（默认 14） |
-| `tkt grp` | Gerrit：`HEAD:refs/for/<branch>` |
-| `tkt usage` | Token Plan 用量（默认 60s 刷新） |
-| `tkt usage --once` | 只查一次 |
-| `tkt usage -i 30` | 自定义刷新间隔（秒） |
+| `tkt config` / `--show` | 重配 / 查看 AI URL·Key·Model |
+| `tkt grp` | Gerrit `HEAD:refs/for/<branch>` |
+| `tkt sv [ver]` | fnm + `npm run serve` |
+| `tkt usage` | Token 用量 |
+| `tkt prompt list \| show` | 提取 prompt |
 
-## 依赖
+## 源码结构
 
-- [fnm](https://github.com/Schniz/fnm)（`tkt sv`）
-- `tkt grp` 需要当前目录是 git 仓库，且 remote 指向 Gerrit
+```
+src/
+  index.ts              CLI 入口
+  ai/                   Vercel AI SDK（本地环）
+  lib/                  共享：env / git / cli 契约
+  tools/                AI tools（按场景加载）
+    git-submit/         commit-plan 等
+  features/             功能区（一命令一目录）
+    git-submit/         tkt gc + agent
+    prompts/            prompt 加载与命令
+    usage/              Token 用量
+    grp/  sv/
+prompts/                prompt 原文（随包发布）
+```
 
 ## 环境变量
 
@@ -21,16 +60,10 @@
 cp .env.example .env
 ```
 
-| 变量 | 说明 |
-| --- | --- |
-| `TKT_PROVIDER` | 用量平台，默认 `minimax`（兼容旧名 `ST_PROVIDER`） |
-| `MINIMAX_API_KEY` | MiniMax Subscription Key |
-| `MINIMAX_API_BASE` | 可选，默认 `https://www.minimaxi.com` |
+`AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`（本地 `gc`）；`TKT_PROVIDER` / `MINIMAX_*`（usage）。
 
 ## 开发
 
 ```bash
-pnpm install
-pnpm build
-pnpm link --global   # 全局可用 tkt
+pnpm install && pnpm build && pnpm link --global
 ```

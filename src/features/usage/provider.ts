@@ -1,4 +1,4 @@
-import { requireEnv, getEnv, getProviderId } from '../env'
+import { requireEnv, getEnv, getProviderId } from '../../lib/env'
 import type { QuotaWindow, UsageModel, UsageProvider, UsageSnapshot } from './types'
 
 interface MiniMaxModelRemain {

@@ -1,22 +1,27 @@
 {
-  "name": "toolkit",
+  "name": "@manshawar/tkt",
   "version": "1.0.0",
-  "description": "Personal CLI toolkit: tkt grp / tkt sv / tkt usage",
+  "description": "Personal CLI: tkt gc / tkt agent / usage / grp / sv",
   "commandName": "tkt",
   "bin": {
     "tkt": "lib/index.js"
   },
   "scripts": {
     "dev": "tsup --watch",
-    "build": "tsup"
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
   },
   "files": [
-    "lib"
+    "lib",
+    "prompts"
   ],
   "type": "module",
   "keywords": [],
-  "author": "",
+  "author": "Manshawar",
   "license": "ISC",
+  "publishConfig": {
+    "access": "public"
+  },
   "packageManager": "pnpm@10.14.0",
   "devDependencies": {
     "@types/node": "^24.3.0",
@@ -25,9 +30,13 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.14",
+    "@clack/prompts": "^1.7.0",
+    "ai": "^7.0.35",
     "chalk": "^5.6.2",
     "commander": "^14.0.0",
     "dotenv": "^17.4.2",
-    "simple-git": "^3.28.0"
+    "simple-git": "^3.28.0",
+    "zod": "^4.4.3"
   }
 }
