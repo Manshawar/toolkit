@@ -10,6 +10,8 @@ import { emitCliError, emitJson, PromptListSchema, PromptShowSchema } from '../.
 
 export const PROMPT_CATALOG = {
   'git-submit.commit-plan': 'git-submit/commit-plan.md',
+  'git-submit.deep-inspect-diff': 'git-submit/deep-inspect-diff.tool.json',
+  'git-submit.agent-prepare': 'git-submit/agent-prepare.md',
 } as const
 
 export type PromptId = keyof typeof PROMPT_CATALOG
@@ -37,6 +39,11 @@ export function loadPrompt(id: string): string {
   const file = resolvePromptPath(id)
   if (!fs.existsSync(file)) throw new Error(`prompt 不存在: ${file}`)
   return stripFrontmatter(fs.readFileSync(file, 'utf8')).trim()
+}
+
+/** 加载 JSON 类 prompt（如 tool 元数据） */
+export function loadPromptJson<T = unknown>(id: string): T {
+  return JSON.parse(loadPrompt(id)) as T
 }
 
 export function listPrompts(): Array<{ id: string; file: string }> {

@@ -1,0 +1,8 @@
+{
+  "description": "Main diff is truncated by default. Call only when a file is marked truncated or one page is not enough. Paginate with offset/limit; stop once you can write the plan.",
+  "params": {
+    "path": "File path from the current diff list",
+    "offset": "Char offset; start at 0, then use nextOffset from the previous result",
+    "limit": "Max chars per page"
+  }
+}

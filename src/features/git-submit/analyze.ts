@@ -8,30 +8,32 @@ import chalk from 'chalk'
 import { createAiClient } from '../../ai'
 import { emitAgentEnvelope, parseWithSchema } from '../../lib/cli'
 import { loadTools } from '../../tools'
+import { withSpinner } from '../../ui'
 import { GitSubmitError } from './errors'
 import {
   COMMIT_PLAN_PROMPT_ID,
   buildCommitPlanUser,
+  loadAgentPrepareInstruction,
   loadCommitPlanSystem,
 } from './prompt'
 import { CommitPlanSchema, type Step } from './types'
 
 export const stepAnalyze: Step = async (ctx) => {
-  console.log(chalk.dim(`→ analyze (ai=${ctx.options.ai})`))
   if (!ctx.diff || !ctx.style) throw new GitSubmitError('缺少 diff 或 style')
 
   const promptId = COMMIT_PLAN_PROMPT_ID
-  const user = buildCommitPlanUser(ctx.style.text, ctx.diff.summary)
+  const user = buildCommitPlanUser(ctx.style, ctx.diff.summary)
   const context = {
     repo: ctx.repo,
     branch: ctx.branch,
-    styleText: ctx.style.text,
+    style: ctx.style,
     files: ctx.diff.files.map((f) => ({
       path: f.path,
       status: f.status,
       additions: f.additions,
       deletions: f.deletions,
       truncated: f.truncated,
+      compressedLen: f.compressedLen,
     })),
     diffSummary: ctx.diff.summary,
     user,
@@ -52,8 +54,7 @@ export const stepAnalyze: Step = async (ctx) => {
       promptCommand: `tkt prompt show ${promptId}`,
       json: true,
       context,
-      instruction:
-        '1) tkt prompt show <promptId> 2) 结合 context 生成 JSON 3) tkt agent git-submit apply --plan-file <path>',
+      instruction: loadAgentPrepareInstruction(),
       next: 'tkt agent git-submit apply --plan-file <plan.json>',
     })
     return { ...ctx, commitPlan: undefined }
@@ -63,17 +64,30 @@ export const stepAnalyze: Step = async (ctx) => {
     throw new GitSubmitError('agent 模式请用: tkt agent git-submit prepare | apply')
   }
 
-  const ai = await createAiClient()
-  const model = await ai.getModel()
-  const tools = loadTools('git-submit.commit-plan', { model, diff: ctx.diff, cwd: ctx.cwd })
+  const quiet = Boolean(ctx.options.json)
+  const plan = await withSpinner(
+    'analyze',
+    async (spin) => {
+      spin.update('analyze · model')
+      const ai = await createAiClient()
+      const model = await ai.getModel()
+      const tools = loadTools('git-submit.commit-plan', {
+        model,
+        diff: ctx.diff!,
+        cwd: ctx.cwd,
+      })
+      spin.update('analyze · CommitPlan')
+      return ai.generateObject({
+        schema: CommitPlanSchema,
+        system: loadCommitPlanSystem(),
+        user,
+        tools,
+        maxSteps: 6,
+      })
+    },
+    { quiet },
+  )
 
-  const plan = await ai.generateObject({
-    schema: CommitPlanSchema,
-    system: loadCommitPlanSystem(),
-    user,
-    tools,
-    maxSteps: 6,
-  })
   logPlan(plan)
   if (ctx.options.dryRun) console.log(chalk.yellow('[dry-run] 跳过 commit / push'))
   return { ...ctx, commitPlan: plan }
