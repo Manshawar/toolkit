@@ -15,9 +15,9 @@ import {
 import { GitSubmitError } from './errors'
 import type { DiffInfo, FileDiff, Step, StyleSummary } from './types'
 
-/** 忽略构建产物 / 依赖；根目录 lib/ 为 tsup 产物 */
+/** 忽略构建产物 / 依赖；根目录 lib/ 为 tsup 产物。lockfile 有复现价值，不忽略。 */
 const JUNK_RE =
-  /(^|\/)(node_modules|dist|build)\/|(^|\/)\.DS_Store$|\.log$|\.tmp$|(^)lib\/|package-lock\.json$|pnpm-lock\.yaml$|yarn\.lock$/
+  /(^|\/)(node_modules|dist|build)\/|(^|\/)\.DS_Store$|\.log$|\.tmp$|(^)lib\//
 const CONVENTIONAL_RE =
   /^(feat|fix|refactor|style|docs|test|perf|build|ci|chore|revert)(\(.+\))?[!]?:\s+/i
 
