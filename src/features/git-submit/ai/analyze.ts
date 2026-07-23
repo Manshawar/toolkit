@@ -2,12 +2,12 @@
  * 本地 AI SDK 生成 CommitPlan；大 diff 默认截断，必要时 deep_inspect_diff 分页吞吐。
  */
 import chalk from 'chalk'
-import { createAiClient } from '../../ai'
-import { loadTools } from '../../tools'
-import { withCatRun } from '../../ui'
-import { GitSubmitError } from './errors'
+import { createAiClient } from '../../../ai'
+import { loadTools } from '../../../tools'
+import { withCatRun } from '../../../ui'
+import { GitSubmitError } from '../errors'
 import { buildCommitPlanUser, loadCommitPlanSystem } from './prompt'
-import { CommitPlanSchema, type Step } from './types'
+import { CommitPlanSchema, type Step } from '../types'
 
 export const stepAnalyze: Step = async (ctx) => {
   if (!ctx.diff || !ctx.style) throw new GitSubmitError('缺少 diff 或 style')

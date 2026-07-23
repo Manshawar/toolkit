@@ -4,16 +4,16 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import chalk from 'chalk'
-import { createGit } from '../../core/git'
-import { createSpinner } from '../../ui'
+import { createGit } from '../../../core/git'
+import { createSpinner } from '../../../ui'
 import {
   MAX_PATCH,
   MAX_SUMMARY,
   compressAndTruncate,
   truncate,
 } from './compress'
-import { GitSubmitError } from './errors'
-import type { DiffInfo, FileDiff, Step, StyleSummary } from './types'
+import { GitSubmitError } from '../errors'
+import type { DiffInfo, FileDiff, Step, StyleSummary } from '../types'
 
 /** 忽略构建产物 / 依赖；根目录 lib/ 为 tsup 产物。lockfile 有复现价值，不忽略。 */
 const JUNK_RE =

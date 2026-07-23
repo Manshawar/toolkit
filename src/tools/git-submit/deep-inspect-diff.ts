@@ -4,7 +4,7 @@
 import { tool, type ToolSet } from 'ai'
 import { z } from 'zod'
 import chalk from 'chalk'
-import { PAGE_SIZE, slicePage } from '../../features/git-submit/compress'
+import { PAGE_SIZE, slicePage } from '../../features/git-submit/collect/compress'
 import { loadPromptJson } from '../../features/prompts'
 import type { ToolLoadContext } from '../types'
 

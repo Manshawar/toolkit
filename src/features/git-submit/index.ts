@@ -4,7 +4,7 @@
 import chalk from 'chalk'
 import { Command, Option } from 'commander'
 import { emitCliError, emitJson, GitSubmitResultSchema } from '../../core/cli'
-import { printAutoPushStatus, resolveAutoPush } from './ask'
+import { printAutoPushStatus, resolveAutoPush } from './prefs'
 import { GitSubmitError } from './errors'
 import { runWorkflow } from './run'
 import type { GitSubmitOptions } from './types'

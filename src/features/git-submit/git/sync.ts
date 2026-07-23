@@ -1,9 +1,9 @@
 /** 远程同步：pull（可跳过无 upstream）+ push（Gerrit：grp + 普通 push） */
-import { createGit, currentBranch, listRemotes, pushOrigin } from '../../core/git'
-import { createSpinner, withSpinner } from '../../ui'
-import { runGrp } from '../grp'
-import { GitSubmitError } from './errors'
-import type { Step } from './types'
+import { createGit, currentBranch, listRemotes, pushOrigin } from '../../../core/git'
+import { createSpinner, withSpinner } from '../../../ui'
+import { runGrp } from '../../grp'
+import { GitSubmitError } from '../errors'
+import type { Step } from '../types'
 
 export const stepPull: Step = async (ctx) => {
   const quiet = Boolean(ctx.options.json)

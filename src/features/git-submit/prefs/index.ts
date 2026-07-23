@@ -3,26 +3,13 @@
  * 之后直接用；可用 --push / --no-push 覆盖并改写偏好。
  */
 import * as fs from 'fs'
-import * as path from 'path'
-import { fileURLToPath } from 'url'
 import { config as loadDotenv } from 'dotenv'
 import * as p from '@clack/prompts'
 import chalk from 'chalk'
+import { packageRoot } from '../../../core/paths'
+import * as path from 'path'
 
 export const GC_PUSH_ENV_KEY = 'TKT_GC_PUSH' as const
-
-function packageRoot(): string {
-  const dir = path.dirname(fileURLToPath(import.meta.url))
-  // bundled: lib/ → .. ；源码: src/features/git-submit → ../../..
-  for (const root of [
-    path.resolve(dir, '..'),
-    path.resolve(dir, '../..'),
-    path.resolve(dir, '../../..'),
-  ]) {
-    if (fs.existsSync(path.join(root, 'package.json'))) return root
-  }
-  return path.resolve(dir, '..')
-}
 
 function envPath(): string {
   return path.join(packageRoot(), '.env')

@@ -1,10 +1,9 @@
 /** 编排：pull → conflict → diff → history → analyze → commit → push */
 import { createGit, currentBranch, ensureRepo, listRemotes } from '../../core/git'
-import { stepAnalyze } from './analyze'
+import { stepAnalyze } from './ai'
 import { stepConflict, stepDiff, stepHistory } from './collect'
-import { stepCommit } from './commit'
 import { GitSubmitError } from './errors'
-import { stepPull, stepPush } from './sync'
+import { stepCommit, stepPull, stepPush } from './git'
 import type { GitSubmitContext, GitSubmitOptions, Step } from './types'
 
 export async function createContext(options: GitSubmitOptions): Promise<GitSubmitContext> {
