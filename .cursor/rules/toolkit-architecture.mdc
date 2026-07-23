@@ -1,5 +1,5 @@
 ---
-description: toolkit 架构约定 — Hono 单端口、prompt 目录、代码干净
+description: toolkit 架构约定 — Hono 单端口、prompt 目录、feature 分层、代码干净
 alwaysApply: true
 ---
 
@@ -10,6 +10,31 @@ alwaysApply: true
 - 前缀 `tkt`；一能力一目录：`src/features/<name>/`
 - Agent 只调 CLI；不要再包一层 Skill 壳去转发同一套命令
 - 用户数据：`~/.config/tkt/<命令名>/`，分文件存，不写进仓库
+
+## Feature 分层（勿平铺散乱）
+
+复杂 feature **按阶段分子目录**，根目录只留入口与共享契约：
+
+```
+features/<name>/
+  index.ts          # CLI 注册
+  run.ts            # 编排流水线
+  types.ts          # 共享类型 / schema
+  errors.ts         # （可选）领域错误
+  <stage>/          # 按职责：config|prefs|gather|collect|ai|git|deliver…
+```
+
+参考：
+
+- `report/`：`config/` → `gather/` → `ai/` → `deliver/`
+- `git-submit/`：`prefs/` → `collect/` → `ai/` → `git/`
+
+约定：
+
+- **禁止**在 feature 根堆一堆平级 `.ts`（难维护）
+- 新能力照现有 feature 拆阶段；简单工具（一两文件）可不拆
+- 阶段目录用 `index.ts` 对外导出；编排只从阶段目录 import
+- 共享路径用 `src/core/paths.ts`，不要各写一套找 package root
 
 ## Web（Hono）
 
@@ -24,12 +49,11 @@ alwaysApply: true
 ## Prompt
 
 - **所有提示词**放 `prompts/`（按能力分子目录），经 `PROMPT_CATALOG` 注册
-- Agent：**CLI 路线** — `tkt prompt show <id>` 读流程，再只调 `tkt …`；不要再包 Skill 壳或 `node scripts/`
 - feature / 本地 AI 用 `loadPrompt(id)`；改文案只动 `prompts/`
-- prompt 写法：分工表 + 命令契约（入参→stdout→下一步）；**迁工具必须同时交 prompt**
+- 需要模型推理的能力（`tkt gc` / `tkt report`）走 **本地 AI SDK 编排**；纯 UI 工具（bench）页面自配，不配 Agent prompt
 
 ## 代码干净
 
 - 改动只碰相关文件；不顺手大重构、不堆无关注释/文档
-- feature 内：CLI / 路由 / 领域逻辑分文件；共享路径用 `src/core/paths.ts`
+- feature 内：CLI / 编排 / 阶段逻辑分文件；共享路径用 `src/core/paths.ts`
 - 依赖尽量薄；本地 UI 服务坚持 Hono + 随包 `assets/`

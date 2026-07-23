@@ -1,6 +1,6 @@
 # toolkit
 
-个人 CLI，前缀 `tkt`。Agent 直接调 CLI。
+个人 CLI，前缀 `tkt`。需要推理的能力走本地 AI SDK（`gc` / `report`）。
 
 ## 常用
 
@@ -13,16 +13,14 @@ tkt gc --no-push
 tkt config
 tkt config --show
 
-# 日报（Agent：init → gather → 写分点 → emit；流程见 prompt）
-tkt prompt show report.daily
-tkt report init
-tkt report gather --date 2026-07-23
-tkt report emit --daily "1. 【项目】…。- 1小时" --sheet-time "概括"
+# 日报（本地 AI，同 gc）
+tkt report
+tkt report --yesterday --append "联调支付回调=1小时"
+tkt report --dry-run
 
-# 模型测速（流程见 prompt）
-tkt prompt show bench.run
+# 模型测速（页面配 gateway.json）
+tkt ui
 tkt bench
-tkt ui   # http://127.0.0.1:8787/bench
 ```
 
 ## 其它
@@ -30,14 +28,14 @@ tkt ui   # http://127.0.0.1:8787/bench
 | 命令 | 功能 |
 | --- | --- |
 | `tkt config` / `--show` | 重配 / 查看 AI URL·Key·Model |
-| `tkt report …` | 日报脚手架（init/gather/emit/…） |
-| `tkt bench` / `tkt ui` | 网关测速 / 本地页 |
+| `tkt report` | 本地 AI 日报（gather → 生成 → 归档） |
+| `tkt bench` / `tkt ui` | 网关测速 / 本地页（页面配 URL/Key） |
 | `tkt grp` | Gerrit `HEAD:refs/for/<branch>` |
 | `tkt sv [ver]` | fnm + `npm run serve` |
 | `tkt usage` | Token 用量 |
 | `tkt prompt list \| show` | 提取 prompt |
 
-数据目录：`~/.config/tkt/<命令>/`（如 `report/setting.json`、`bench/history/`）。
+数据目录：`~/.config/tkt/<命令>/`（如 `report/history/YYYY-MM-DD.json`、`bench/gateway.json`）。
 
 ## 源码结构
 
@@ -51,7 +49,9 @@ src/
   tools/                AI tools
   features/
     git-submit/         tkt gc
+      prefs/ collect/ ai/ git/
     report/             tkt report
+      config/ gather/ ai/ deliver/
     bench/              tkt bench
     prompts/ usage/ grp/ sv/
 assets/                 UI HTML
@@ -64,7 +64,7 @@ prompts/                prompt 原文
 cp .env.example .env
 ```
 
-`AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`（`gc` / `bench`）；`TKT_PROVIDER` / `MINIMAX_*`（usage）。
+`AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`（`tkt gc`）；`tkt bench` 用页面/`gateway.json`；`TKT_PROVIDER` / `MINIMAX_*`（usage）。
 
 ## 开发
 
