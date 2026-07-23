@@ -1,28 +1,28 @@
 # toolkit
 
-个人 CLI，前缀 `tkt`。
+个人 CLI，前缀 `tkt`。Agent 直接调 CLI。
 
-## 双环
-
-| 环 | 命令 | AI |
-| --- | --- | --- |
-| 本地 | `tkt gc` | Vercel AI SDK（`generateText` + `Output.object`） |
-| Skill | `tkt agent git-submit prepare \| apply` | 宿主 Agent；CLI 只校验+执行 |
+## 常用
 
 ```bash
-# 本地（首次询问自动推送，之后记住）
+# AI 提交（首次询问自动推送，之后记住）
 tkt gc
-tkt gc --push      # 开启并记住
-tkt gc --no-push   # 关闭并记住
+tkt gc --push
+tkt gc --no-push
 
-# AI 配置（空回车保留原值）
 tkt config
 tkt config --show
 
-# Skill
-tkt agent git-submit prepare
-tkt prompt show git-submit.commit-plan
-tkt agent git-submit apply --plan-file plan.json
+# 日报（Agent：init → gather → 写分点 → emit；流程见 prompt）
+tkt prompt show report.daily
+tkt report init
+tkt report gather --date 2026-07-23
+tkt report emit --daily "1. 【项目】…。- 1小时" --sheet-time "概括"
+
+# 模型测速（流程见 prompt）
+tkt prompt show bench.run
+tkt bench
+tkt ui   # http://127.0.0.1:8787/bench
 ```
 
 ## 其它
@@ -30,27 +30,32 @@ tkt agent git-submit apply --plan-file plan.json
 | 命令 | 功能 |
 | --- | --- |
 | `tkt config` / `--show` | 重配 / 查看 AI URL·Key·Model |
+| `tkt report …` | 日报脚手架（init/gather/emit/…） |
+| `tkt bench` / `tkt ui` | 网关测速 / 本地页 |
 | `tkt grp` | Gerrit `HEAD:refs/for/<branch>` |
 | `tkt sv [ver]` | fnm + `npm run serve` |
 | `tkt usage` | Token 用量 |
 | `tkt prompt list \| show` | 提取 prompt |
+
+数据目录：`~/.config/tkt/<命令>/`（如 `report/setting.json`、`bench/history/`）。
 
 ## 源码结构
 
 ```
 src/
   index.ts              CLI 入口
-  ai/                   Vercel AI SDK（本地环）
-  lib/                  共享：env / git / cli 契约
-  ui/                   CLI 等待动画（spinner）
-  tools/                AI tools（按场景加载）
-    git-submit/         commit-plan 等
-  features/             功能区（一命令一目录）
-    git-submit/         tkt gc + agent
-    prompts/            prompt 加载与命令
-    usage/              Token 用量
-    grp/  sv/
-prompts/                prompt 原文（随包发布）
+  ai/                   Vercel AI SDK（gc）
+  core/                 paths / env / git / cli
+  server/               Hono 单端口 UI
+  ui/                   CLI spinner
+  tools/                AI tools
+  features/
+    git-submit/         tkt gc
+    report/             tkt report
+    bench/              tkt bench
+    prompts/ usage/ grp/ sv/
+assets/                 UI HTML
+prompts/                prompt 原文
 ```
 
 ## 环境变量
@@ -59,7 +64,7 @@ prompts/                prompt 原文（随包发布）
 cp .env.example .env
 ```
 
-`AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`（本地 `gc`）；`TKT_PROVIDER` / `MINIMAX_*`（usage）。
+`AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL`（`gc` / `bench`）；`TKT_PROVIDER` / `MINIMAX_*`（usage）。
 
 ## 开发
 
