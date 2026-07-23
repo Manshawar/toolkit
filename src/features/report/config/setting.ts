@@ -89,6 +89,9 @@ export function loadSetting(): ReportSetting {
   }
   if (!s.day_start_max) s.day_start_max = DEFAULT_SETTING.day_start_max
   if (!s.day_end_min) s.day_end_min = DEFAULT_SETTING.day_end_min
+  // 旧默认 20:30 容易把一天拉太长 → 迁到 21:00（封顶仍 22:00）
+  if (s.day_end_min === '20:30') s.day_end_min = '21:00'
+  if (s.day_start_max === '09:30') s.day_start_max = '09:00'
   if (!s.role_definitions) s.role_definitions = DEFAULT_SETTING.role_definitions
   if (typeof s.show_roster !== 'boolean') s.show_roster = true
   if (!Array.isArray(s.repositories)) s.repositories = []

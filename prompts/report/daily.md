@@ -14,7 +14,7 @@
 
 ## 规则
 
-1. items.hours 之和 ≥ targetHours；只能多不能少。
+1. items.hours 之和须等于（或略高于半小时粒度下对齐）用户设定的工时窗 targetHours（上班→下班，调整后以该时间为准）；禁止按多仓累加拉长。
 2. 单条 hours ∈ [0.5, 4]，0.5 粒度。
 3. 改写 commit：去 feat:/fix: 前缀；动词开头；业务中文。
 4. text 不含【项目】与「- X小时」。

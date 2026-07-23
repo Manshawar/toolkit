@@ -35,6 +35,7 @@ export type ReportSetting = {
   show_roster: boolean
   git_user_email: string
   day_start_max: string
+  /** 下班时间下限（常用 21:00）；绝对不超过 22:00 */
   day_end_min: string
   repositories: RepoEntry[]
   role_definitions: Record<string, RoleDef>
@@ -45,8 +46,8 @@ export const DEFAULT_SETTING: ReportSetting = {
   auto_copy: null,
   show_roster: true,
   git_user_email: '',
-  day_start_max: '09:30',
-  day_end_min: '20:30',
+  day_start_max: '09:00',
+  day_end_min: '21:00',
   repositories: [],
   role_definitions: {
     前端: {

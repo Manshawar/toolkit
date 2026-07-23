@@ -53,8 +53,9 @@ features/<name>/
 - 需要模型推理的能力（`tkt gc` / `tkt report`）走 **本地 AI SDK 编排**；纯 UI 工具（bench）页面自配，不配 Agent prompt
 - DeepSeek 等网关拒 `json_schema`：`supportsStructuredOutputs` 按模型自动关（回退 `json_object`）；可用 `AI_STRUCTURED_OUTPUTS` 强制
 - `AI_BASE_URL` 若只写 host，客户端会补 `/v1`
-- `tkt report` 名单：remote 末段仅作参考；日报名必须中文（词典/AI 猜，禁止 KaoQin-Attendance）；e 改后记 name_custom；o / `--roster`/`--no-roster` 控名单
-- report AI tool `add_repo`：先校验本地路径是 git，否则直接失败不写库；是则入库并采 commit，合并进当日 gather 再出日报
+- `tkt report` 工时：全日只算一窗（多仓不累加）；默认 09:00→21:00，封顶 22:00；启动可调上下班
+- `tkt report` 名单：remote 末段=标识名；书写名必须中文；o / `--roster` 控名单
+- report AI tool `add_repo`：先校验 git，否则失败不写库；入库后并入 gather 再出日报
 
 ## 代码干净
 

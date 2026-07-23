@@ -3,7 +3,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { isoNow, loadSetting, writeSetting } from '../config/setting'
 import type { GatherRepo, GatherResult, ReportSetting, RepoEntry } from '../types'
-import { collectSubjects, detectProject, isGitRepo, sessionHours, tryExec } from './git'
+import { collectSubjects, detectProject, isGitRepo, daySessionHours, repoSpanHours, tryExec } from './git'
 
 export type GatherOpts = {
   date: string
@@ -134,7 +134,7 @@ export function gatherToday(opts: GatherOpts): GatherResult {
     : null
 
   const repos: GatherRepo[] = []
-  let sessionHoursSum = 0
+  const allCommits: Array<{ time: number }> = []
   let commitCount = 0
 
   for (const repo of setting.repositories) {
@@ -158,22 +158,22 @@ export function gatherToday(opts: GatherOpts): GatherResult {
     })
     if (!commits.length) continue
 
-    const hours = sessionHours(commits, date, dayStart, dayEnd)
-    const project = repo.display_name || alias || detectProject(repoPath)
-    sessionHoursSum += hours
+    allCommits.push(...commits)
     commitCount += commits.length
     repos.push({
       path: repoPath,
       alias,
       display_name: repo.display_name || '',
-      project,
+      project: repo.display_name || alias || detectProject(repoPath),
       commits: commits.map((c) => c.subject),
-      hours,
+      // 单仓跨度仅作分配参考，全日目标用工时窗（不按仓累加）
+      hours: repoSpanHours(commits),
     })
   }
 
   writeSetting(setting)
-  return { date, repos, sessionHours: sessionHoursSum, commitCount }
+  const session = daySessionHours(allCommits, date, dayStart, dayEnd)
+  return { date, repos, sessionHours: session, commitCount }
 }
 
 export {

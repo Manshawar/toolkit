@@ -2,6 +2,12 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { execSync } from 'child_process'
+import {
+  DAY_CEILING,
+  DAY_FLOOR,
+  clampHm,
+  hoursBetween,
+} from '../config/work-hours'
 
 export function tryExec(cmd: string): string {
   try {
@@ -35,23 +41,38 @@ export function collectSubjects(
     .filter((c) => !Number.isNaN(c.time) && !/^(Merge|Revert )/.test(c.subject))
 }
 
-/** 黑心窗：起点≤dayStartMax，终点≥dayEndMin；半小时粒度；[0.5,14] */
+/** 单仓：仅按该仓 commit 跨度（不拉满早晚），给 AI 分配参考 */
+export function repoSpanHours(commits: Array<{ time: number }>): number {
+  if (!commits.length) return 0
+  const sorted = [...commits].sort((a, b) => a.time - b.time)
+  const h = (sorted[sorted.length - 1]!.time - sorted[0]!.time) / 3600
+  return Math.min(Math.max(Math.round(h * 2) / 2 || 0.5, 0.5), 6)
+}
+
+/**
+ * 全日目标工时：以用户设定的上下班为准（不再被 commit 时间拉长）。
+ * commits 参数保留兼容，不参与计算。
+ */
+export function daySessionHours(
+  _commits: Array<{ time: number }>,
+  _date: string,
+  dayStartMax = '09:00',
+  dayEndMin = '21:00',
+): number {
+  return hoursBetween(
+    clampHm(dayStartMax, DAY_FLOOR, DAY_CEILING),
+    clampHm(dayEndMin, DAY_FLOOR, DAY_CEILING),
+  )
+}
+
+/** @deprecated 用 daySessionHours；保留别名避免旧引用 */
 export function sessionHours(
   commits: Array<{ time: number }>,
   date: string,
-  dayStartMax = '09:30',
-  dayEndMin = '20:30',
+  dayStartMax = '09:00',
+  dayEndMin = '21:00',
 ): number {
-  if (!commits.length) return 0
-  const sorted = [...commits].sort((a, b) => a.time - b.time)
-  const startHH = /^\d{1,2}:\d{2}$/.test(dayStartMax) ? dayStartMax : '09:30'
-  const endHH = /^\d{1,2}:\d{2}$/.test(dayEndMin) ? dayEndMin : '20:30'
-  const capStart = Math.floor(new Date(`${date}T${startHH}:00`).getTime() / 1000)
-  const capEnd = Math.floor(new Date(`${date}T${endHH}:00`).getTime() / 1000)
-  const start = Math.min(sorted[0]!.time, capStart)
-  const end = Math.max(sorted[sorted.length - 1]!.time, capEnd)
-  const h = Math.round(((end - start) / 3600) * 2) / 2
-  return Math.min(Math.max(h, 0.5), 14)
+  return daySessionHours(commits, date, dayStartMax, dayEndMin)
 }
 
 export function detectProject(repo: string): string {

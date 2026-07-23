@@ -7,7 +7,7 @@ import * as path from 'path'
 import { isoNow, loadSetting, writeSetting } from '../config/setting'
 import { defaultDisplayName } from '../config/guess-name'
 import type { GatherRepo, RepoEntry } from '../types'
-import { collectSubjects, detectProject, isGitRepo, sessionHours, tryExec } from './git'
+import { collectSubjects, detectProject, isGitRepo, repoSpanHours, tryExec } from './git'
 
 export type AddRepoOk = {
   ok: true
@@ -91,8 +91,6 @@ export function addAndGatherRepo(rawPath: string, opts: AddRepoOpts): AddRepoRes
   }
   writeSetting(setting)
 
-  const dayStart = opts.dayStart || setting.day_start_max
-  const dayEnd = opts.dayEnd || setting.day_end_min
   const author = setting.git_user_email || tryExec('git config --get user.email')
   const commits = collectSubjects(abs, opts.date, author)
 
@@ -109,7 +107,7 @@ export function addAndGatherRepo(rawPath: string, opts: AddRepoOpts): AddRepoRes
     }
   }
 
-  const hours = sessionHours(commits, opts.date, dayStart, dayEnd)
+  const hours = repoSpanHours(commits)
   const project = entry.display_name || entry.alias || detectProject(abs)
   const gather: GatherRepo = {
     path: abs,
@@ -142,13 +140,11 @@ export function mergeGatherRepo(
   if (i >= 0) {
     const old = base.repos[i]!
     base.commitCount -= old.commits.length
-    base.sessionHours -= old.hours
     base.repos[i] = added
   } else {
     base.repos.push(added)
   }
   base.commitCount += added.commits.length
-  base.sessionHours += added.hours
-  if (base.sessionHours < 0) base.sessionHours = 0
+  // sessionHours 是全日窗，不按仓累加/扣减
   if (base.commitCount < 0) base.commitCount = 0
 }

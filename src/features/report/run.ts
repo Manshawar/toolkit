@@ -6,8 +6,10 @@ import {
   ensurePrefs,
   fillMissingDisplayNames,
   loadSetting,
+  maxDayHours,
   promptAppendOnly,
   promptRoster,
+  promptWorkWindow,
   setShowRoster,
   writeSetting,
 } from './config'
@@ -48,6 +50,8 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
 
   let append = [...(options.append ?? [])]
   let onlyPaths: string[] | undefined
+  let dayStart = options.dayStart
+  let dayEnd = options.dayEnd
 
   if (prefs.useGit) {
     let repos = discoverRepos({ userRepos: options.userRepos })
@@ -69,16 +73,29 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
         : await promptAppendOnly(repos)
       onlyPaths = picked.repos.filter((r) => r.enabled).map((r) => r.path)
       if (picked.append) append.push(picked.append)
+
+      // CLI 未显式传时间时，给用户调工时窗（封顶 09:00–22:00）
+      if (!options.dayStart && !options.dayEnd) {
+        const win = await promptWorkWindow()
+        dayStart = win.dayStart
+        dayEnd = win.dayEnd
+      }
     } else {
       onlyPaths = repos.filter((r) => r.enabled).map((r) => r.path)
     }
   }
 
+  if (!dayStart || !dayEnd) {
+    const s = loadSetting()
+    dayStart = dayStart || s.day_start_max
+    dayEnd = dayEnd || s.day_end_min
+  }
+
   const gather = prefs.useGit
     ? gatherToday({
         date,
-        dayStart: options.dayStart,
-        dayEnd: options.dayEnd,
+        dayStart,
+        dayEnd,
         userRepos: options.userRepos,
         onlyPaths,
       })
@@ -91,12 +108,19 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
   } else {
     console.error(
       chalk.dim(
-        `采集 ${gather.repos.length} 仓 · ${gather.commitCount} commit · session ${gather.sessionHours}h`,
+        `采集 ${gather.repos.length} 仓 · ${gather.commitCount} commit · 工时窗 ${dayStart}→${dayEnd} · session ${gather.sessionHours}h`,
       ),
     )
   }
 
-  const targetHours = Math.max(options.targetHours ?? 8, gather.sessionHours)
+  // 目标工时：以用户调整的上下班为准（CLI --target-hours 可覆盖）
+  const windowHours = maxDayHours(dayStart!, dayEnd!)
+  const targetHours =
+    options.targetHours != null
+      ? Math.min(windowHours, Math.max(0.5, options.targetHours))
+      : windowHours
+
+  console.error(chalk.dim(`目标工时 ${targetHours}h（${dayStart} → ${dayEnd}）`))
 
   const plan = await generateDailyPlan({
     role: prefs.role,
@@ -104,8 +128,8 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
     targetHours,
     gather,
     append,
-    dayStart: options.dayStart,
-    dayEnd: options.dayEnd,
+    dayStart,
+    dayEnd,
     quiet: Boolean(options.json),
   })
 
