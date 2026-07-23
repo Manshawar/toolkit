@@ -15,9 +15,13 @@ export type RoleDef = {
 
 export type RepoEntry = {
   path: string
+  /** 目录名 / 短名（名单左侧） */
   alias: string
+  /** 日报用中文名（名单中间，可改；按 remote 猜一次后记住） */
   display_name: string
   git_remote: string
+  /** 勾选后才参与今日 gather；默认 true，可在启动名单里空格取消 */
+  enabled: boolean
   added_at: string
   last_used_at: string
 }

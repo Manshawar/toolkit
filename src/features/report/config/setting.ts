@@ -3,7 +3,7 @@ import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 import { dataDir, ensureDataDir } from '../../../core/paths'
-import { DEFAULT_SETTING, REPORT_ARG, type ReportSetting } from '../types'
+import { DEFAULT_SETTING, REPORT_ARG, type ReportSetting, type RepoEntry } from '../types'
 
 export function reportDir(): string {
   return dataDir(REPORT_ARG)
@@ -48,6 +48,22 @@ function migrateLegacy(): void {
   }
 }
 
+/** 把名单勾选 / 日报名写回 */
+export function applyRoster(
+  rows: Array<{ path: string; display_name: string; enabled: boolean }>,
+): RepoEntry[] {
+  const setting = loadSetting()
+  for (const row of rows) {
+    const i = setting.repositories.findIndex((r) => r.path === row.path)
+    if (i < 0) continue
+    setting.repositories[i]!.display_name = row.display_name.trim()
+    setting.repositories[i]!.enabled = row.enabled
+    setting.repositories[i]!.last_used_at = isoNow()
+  }
+  writeSetting(setting)
+  return setting.repositories
+}
+
 export function loadSetting(): ReportSetting {
   migrateLegacy()
   ensureDataDir(REPORT_ARG)
@@ -61,5 +77,13 @@ export function loadSetting(): ReportSetting {
   if (!s.day_end_min) s.day_end_min = DEFAULT_SETTING.day_end_min
   if (!s.role_definitions) s.role_definitions = DEFAULT_SETTING.role_definitions
   if (!Array.isArray(s.repositories)) s.repositories = []
+  for (const r of s.repositories) {
+    if (typeof r.enabled !== 'boolean') {
+      // 个人 GitHub 仓默认不采集（如 toolkit）；公司仓默认勾选
+      r.enabled = !/github\.com/i.test(r.git_remote || '')
+    }
+    if (r.display_name == null) r.display_name = ''
+    if (r.git_remote == null) r.git_remote = ''
+  }
   return s
 }

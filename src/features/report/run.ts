@@ -1,8 +1,14 @@
-/** 本地编排：prefs → gather → AI → deliver */
+/** 本地编排：prefs → 名单勾选 → gather → AI → deliver */
 import chalk from 'chalk'
 import * as path from 'path'
 import { generateDailyPlan } from './ai'
-import { ensurePrefs, loadSetting, writeSetting } from './config'
+import {
+  ensurePrefs,
+  fillMissingDisplayNames,
+  loadSetting,
+  promptRoster,
+  writeSetting,
+} from './config'
 import {
   assertPlan,
   buildRecord,
@@ -11,7 +17,7 @@ import {
   halfHour,
   normalizeSheetTime,
 } from './deliver'
-import { gatherToday } from './gather'
+import { discoverRepos, gatherToday } from './gather'
 import type { ReportOptions } from './types'
 
 function applyDisplayNames(pairs: Array<{ path: string; name: string }>): void {
@@ -35,19 +41,37 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
   const prefs = await ensurePrefs({ role: options.role })
   const date = options.date || new Date().toISOString().slice(0, 10)
 
+  let append = [...(options.append ?? [])]
+  let onlyPaths: string[] | undefined
+
+  if (prefs.useGit) {
+    let repos = discoverRepos({ userRepos: options.userRepos })
+    repos = await fillMissingDisplayNames(repos, { quiet: Boolean(options.json) })
+
+    const interactive = process.stdin.isTTY && !options.json
+    if (interactive) {
+      const picked = await promptRoster(repos)
+      onlyPaths = picked.repos.filter((r) => r.enabled).map((r) => r.path)
+      if (picked.append) append.push(picked.append)
+    } else {
+      onlyPaths = repos.filter((r) => r.enabled).map((r) => r.path)
+    }
+  }
+
   const gather = prefs.useGit
     ? gatherToday({
         date,
         dayStart: options.dayStart,
         dayEnd: options.dayEnd,
         userRepos: options.userRepos,
+        onlyPaths,
       })
     : { date, repos: [], sessionHours: 0, commitCount: 0 }
 
   if (!prefs.useGit) {
     console.error(chalk.dim('非开发角色：跳过 git gather'))
   } else if (gather.commitCount === 0) {
-    console.error(chalk.yellow('今日无 commit，将按主动型类目补齐（可用 --append 补充）'))
+    console.error(chalk.yellow('今日无 commit（或未勾选仓库），将按主动型类目补齐（可附带补充）'))
   } else {
     console.error(
       chalk.dim(
@@ -63,7 +87,9 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
     categories: prefs.categories,
     targetHours,
     gather,
-    append: options.append ?? [],
+    append,
+    dayStart: options.dayStart,
+    dayEnd: options.dayEnd,
     quiet: Boolean(options.json),
   })
 

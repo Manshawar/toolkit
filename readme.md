@@ -13,7 +13,7 @@ tkt gc --no-push
 tkt config
 tkt config --show
 
-# 日报（本地 AI，同 gc）
+# 日报（启动名单勾选；空格取消个人仓；附带杂事）
 tkt report
 tkt report --yesterday --append "联调支付回调=1小时"
 tkt report --dry-run
@@ -51,7 +51,8 @@ src/
     git-submit/         tkt gc
       prefs/ collect/ ai/ git/
     report/             tkt report
-      config/ gather/ ai/ deliver/
+      config/           prefs / roster 名单 / guess-name
+      gather/ ai/ deliver/
     bench/              tkt bench
     prompts/ usage/ grp/ sv/
 assets/                 UI HTML

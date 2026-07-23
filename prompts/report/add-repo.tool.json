@@ -1,0 +1,6 @@
+{
+  "description": "Add a local repo path into the report library and gather today's commits. First checks git; if not a git repo, returns ok=false and stops (does not write). Call when Append or user mentions a local absolute/relative path that is missing from Repos.",
+  "params": {
+    "path": "Local filesystem path to the git repository"
+  }
+}

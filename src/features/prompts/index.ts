@@ -12,6 +12,7 @@ export const PROMPT_CATALOG = {
   'git-submit.commit-plan': 'git-submit/commit-plan.md',
   'git-submit.deep-inspect-diff': 'git-submit/deep-inspect-diff.tool.json',
   'report.daily': 'report/daily.md',
+  'report.add-repo': 'report/add-repo.tool.json',
 } as const
 
 export type PromptId = keyof typeof PROMPT_CATALOG

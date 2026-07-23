@@ -6,20 +6,21 @@
  *   index.ts                 # loadTools(scenario, ctx)
  *   types.ts
  *   git-submit/              # 场景目录
- *     deep-inspect-diff.ts
- *     index.ts
+ *   report/
  * ```
  *
- * 新增：写 tool 文件 → 场景 index merge → types 里加 ToolScenario（如需要）→ registry 挂上。
+ * 新增：写 tool 文件 → 场景 index merge → types 里加 ToolScenario → registry 挂上。
  */
 import type { ToolSet } from 'ai'
 import { loadCommitPlanTools } from './git-submit'
+import { loadReportDailyTools } from './report'
 import type { ToolLoadContext, ToolLoader, ToolScenario } from './types'
 
 export type { ToolLoadContext, ToolScenario } from './types'
 
 const registry: Record<ToolScenario, ToolLoader> = {
   'git-submit.commit-plan': loadCommitPlanTools,
+  'report.daily': loadReportDailyTools,
 }
 
 /** 按场景加载 ToolSet；未知场景返回空对象 */

@@ -1,7 +1,8 @@
-/** 本地 AI：prompt + generateObject → DailyPlan */
+/** 本地 AI：prompt + tools(add_repo) + generateObject → DailyPlan */
 import { createAiClient } from '../../../ai'
-import { loadPrompt } from '../../prompts'
+import { loadTools } from '../../../tools'
 import { withCatRun } from '../../../ui'
+import { loadPrompt } from '../../prompts'
 import { DailyPlanSchema, type DailyPlan, type GatherResult } from '../types'
 
 export const DAILY_PROMPT_ID = 'report.daily' as const
@@ -51,18 +52,33 @@ export async function generateDailyPlan(input: {
   targetHours: number
   gather: GatherResult
   append: string[]
+  dayStart?: string
+  dayEnd?: string
   quiet?: boolean
 }): Promise<DailyPlan> {
   return withCatRun(
     'report',
     async () => {
       const ai = await createAiClient()
+      const model = await ai.getModel()
+      const tools = loadTools('report.daily', {
+        model,
+        report: {
+          date: input.gather.date,
+          dayStart: input.dayStart,
+          dayEnd: input.dayEnd,
+          gather: input.gather,
+        },
+      })
+
       return ai.generateObject({
         schema: DailyPlanSchema,
         system: loadDailySystem(),
         user: buildDailyUser(input),
         name: 'DailyPlan',
         description: 'Daily report plan',
+        tools,
+        maxSteps: 6,
       })
     },
     { quiet: Boolean(input.quiet) },
