@@ -25,11 +25,13 @@ import { runUsage } from './features/usage'
 import { registerGitSubmitCommands } from './features/git-submit'
 import { runPromptList, runPromptShow } from './features/prompts'
 import { reconfigureAiConfig, showAiConfig } from './ai'
+import { interceptCliUpdate } from './core/update-check'
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 loadDotenv({ path: path.join(packageRoot, '.env'), quiet: true })
 
 async function main() {
+  interceptCliUpdate()
   const pkg = (await import('../package.json')).default
   const program = new Command(pkg.commandName)
 

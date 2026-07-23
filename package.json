@@ -1,6 +1,6 @@
 {
   "name": "@manshawar/tkt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Personal CLI: tkt gc / tkt agent / usage / grp / sv",
   "commandName": "tkt",
   "bin": {
