@@ -78,21 +78,54 @@ function formatNoObjectError(err: InstanceType<typeof NoObjectGeneratedError>): 
   return `AI 结构化输出解析失败${finish}${cause ? `: ${cause}` : ''}${snippet}`
 }
 
+/**
+ * OpenAI Compatible baseURL：裸 host 补 `/v1`（与 Apifox `/v1/chat/completions` 对齐）。
+ * 已带路径（如 `/v1`、`/openai`）则只去尾斜杠。
+ */
+export function normalizeOpenAiBaseUrl(baseUrl: string): string {
+  const trimmed = baseUrl.trim().replace(/\/+$/, '')
+  try {
+    const u = new URL(trimmed)
+    if (u.pathname === '/' || u.pathname === '') {
+      u.pathname = '/v1'
+      return u.toString().replace(/\/+$/, '')
+    }
+  } catch {
+    /* ignore */
+  }
+  return trimmed
+}
+
+/**
+ * 是否发 response_format=json_schema。
+ * DeepSeek（经 litellm）会拒：`This response_format type is unavailable now`；
+ * 关则回退 json_object + prompt schema（本客户端已有抽 JSON / zod）。
+ * 可用 AI_STRUCTURED_OUTPUTS=true|false 强制覆盖。
+ */
+export function supportsStructuredOutputs(model: string): boolean {
+  const env = process.env.AI_STRUCTURED_OUTPUTS?.trim().toLowerCase()
+  if (env && ['0', 'false', 'no', 'off'].includes(env)) return false
+  if (env && ['1', 'true', 'yes', 'on'].includes(env)) return true
+  if (/deepseek/i.test(model)) return false
+  return true
+}
+
 export async function createAiClient(config?: AiConfig): Promise<AiClient> {
   async function resolve() {
     const cfg = config ?? (await interceptAiConfig())
+    const baseURL = normalizeOpenAiBaseUrl(cfg.baseUrl)
     const provider = createOpenAICompatible({
       name: 'tkt',
-      baseURL: cfg.baseUrl,
+      baseURL,
       apiKey: cfg.apiKey,
-      supportsStructuredOutputs: true,
+      supportsStructuredOutputs: supportsStructuredOutputs(cfg.model),
     })
     // 兼容网关常把 JSON 包在 ```json 里；中间件先剥壳再交给 Output.object
     const model = wrapLanguageModel({
       model: provider.chatModel(cfg.model) as LanguageModel,
       middleware: extractJsonMiddleware(),
     })
-    return { cfg, model }
+    return { cfg: { ...cfg, baseUrl: baseURL }, model }
   }
 
   return {

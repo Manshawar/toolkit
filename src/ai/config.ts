@@ -170,7 +170,7 @@ async function promptAiFields(
   abortIfCancel(model)
 
   const config: AiConfig = {
-    baseUrl: (url.trim() || partial.baseUrl || '').replace(/\/$/, ''),
+    baseUrl: (url.trim() || partial.baseUrl || '').replace(/\/+$/, ''),
     apiKey: key.trim() || partial.apiKey || '',
     model: model.trim() || partial.model || '',
   }

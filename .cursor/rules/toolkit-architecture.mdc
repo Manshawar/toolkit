@@ -51,6 +51,8 @@ features/<name>/
 - **所有提示词**放 `prompts/`（按能力分子目录），经 `PROMPT_CATALOG` 注册
 - feature / 本地 AI 用 `loadPrompt(id)`；改文案只动 `prompts/`
 - 需要模型推理的能力（`tkt gc` / `tkt report`）走 **本地 AI SDK 编排**；纯 UI 工具（bench）页面自配，不配 Agent prompt
+- DeepSeek 等网关拒 `json_schema`：`supportsStructuredOutputs` 按模型自动关（回退 `json_object`）；可用 `AI_STRUCTURED_OUTPUTS` 强制
+- `AI_BASE_URL` 若只写 host，客户端会补 `/v1`
 
 ## 代码干净
 
