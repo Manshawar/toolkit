@@ -94,6 +94,7 @@ export function loadSetting(): ReportSetting {
   if (s.day_start_max === '09:30') s.day_start_max = '09:00'
   if (!s.role_definitions) s.role_definitions = DEFAULT_SETTING.role_definitions
   if (typeof s.show_roster !== 'boolean') s.show_roster = true
+  if (s.auto_copy == null) s.auto_copy = true
   if (!Array.isArray(s.repositories)) s.repositories = []
   for (const r of s.repositories) {
     if (typeof r.enabled !== 'boolean') {

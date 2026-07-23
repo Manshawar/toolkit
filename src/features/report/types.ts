@@ -43,7 +43,7 @@ export type ReportSetting = {
 
 export const DEFAULT_SETTING: ReportSetting = {
   role: '',
-  auto_copy: null,
+  auto_copy: true,
   show_roster: true,
   git_user_email: '',
   day_start_max: '09:00',

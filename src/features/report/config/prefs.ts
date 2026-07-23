@@ -34,21 +34,16 @@ export async function ensurePrefs(opts: { role?: string } = {}): Promise<{
     writeSetting(setting)
   }
 
+  // 剪贴板默认开；可在快捷键区按 c 关，不再主动弹问
   if (setting.auto_copy == null) {
-    if (!process.stdin.isTTY) {
-      setting.auto_copy = false
-    } else {
-      const yes = await p.confirm({ message: '完成后复制分点到剪贴板？', initialValue: true })
-      abort(yes)
-      setting.auto_copy = Boolean(yes)
-    }
+    setting.auto_copy = true
     writeSetting(setting)
   }
 
   const def = setting.role_definitions[setting.role]
   return {
     role: setting.role,
-    autoCopy: Boolean(setting.auto_copy),
+    autoCopy: setting.auto_copy !== false,
     useGit: def?.use_git ?? false,
     categories: def?.soft_work_categories ?? [],
   }

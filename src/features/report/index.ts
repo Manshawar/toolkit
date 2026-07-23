@@ -23,8 +23,8 @@ export function registerReportCommands(program: Command): void {
     .option('--no-clipboard', '不复制剪贴板')
     .option('--dry-run', '只生成不归档')
     .option('--json', '输出 JSON（含 plan）')
-    .option('--roster', '强制打开名单（并记住）')
-    .option('--no-roster', '跳过名单直达附带输入（并记住）')
+    .option('--roster', '启动时先打开快捷键区（默认是补充输入框）')
+    .option('--no-roster', '（兼容）同默认：先进入补充输入框')
     .action(async (opts) => {
       try {
         let date: string | undefined = opts.date

@@ -16,7 +16,7 @@ export {
   defaultDisplayName,
   projectLabel,
 } from './guess-name'
-export { promptRoster, promptAppendOnly, type RosterResult, type RosterRow } from './roster'
+export { promptRoster, promptAppendOnly, promptReportInteractive, type RosterResult, type RosterRow } from './roster'
 export {
   promptWorkWindow,
   maxDayHours,

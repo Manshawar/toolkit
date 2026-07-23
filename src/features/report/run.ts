@@ -7,10 +7,7 @@ import {
   fillMissingDisplayNames,
   loadSetting,
   maxDayHours,
-  promptAppendOnly,
-  promptRoster,
-  promptWorkWindow,
-  setShowRoster,
+  promptReportInteractive,
   writeSetting,
 } from './config'
 import {
@@ -52,6 +49,7 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
   let onlyPaths: string[] | undefined
   let dayStart = options.dayStart
   let dayEnd = options.dayEnd
+  let autoCopy = prefs.autoCopy
 
   if (prefs.useGit) {
     let repos = discoverRepos({ userRepos: options.userRepos })
@@ -59,27 +57,15 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
 
     const interactive = process.stdin.isTTY && !options.json
     if (interactive) {
-      if (options.forceRoster) setShowRoster(true)
-      if (options.skipRoster) setShowRoster(false)
-
-      const showRoster = options.forceRoster
-        ? true
-        : options.skipRoster
-          ? false
-          : loadSetting().show_roster !== false
-
-      const picked = showRoster
-        ? await promptRoster(repos)
-        : await promptAppendOnly(repos)
+      // 默认进补充输入框；--roster 才先打开快捷键区。工时/剪贴板不主动弹。
+      const picked = await promptReportInteractive(repos, {
+        focusKeys: Boolean(options.forceRoster),
+      })
       onlyPaths = picked.repos.filter((r) => r.enabled).map((r) => r.path)
       if (picked.append) append.push(picked.append)
-
-      // CLI 未显式传时间时，给用户调工时窗（封顶 09:00–22:00）
-      if (!options.dayStart && !options.dayEnd) {
-        const win = await promptWorkWindow()
-        dayStart = win.dayStart
-        dayEnd = win.dayEnd
-      }
+      if (picked.dayStart) dayStart = picked.dayStart
+      if (picked.dayEnd) dayEnd = picked.dayEnd
+      autoCopy = picked.autoCopy
     } else {
       onlyPaths = repos.filter((r) => r.enabled).map((r) => r.path)
     }
@@ -113,14 +99,12 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
     )
   }
 
-  // 目标工时：以用户调整的上下班为准（CLI --target-hours 可覆盖）
+  // 目标工时：完全以用户设定窗为准（--target-hours 显式覆盖时仍用该值）
   const windowHours = maxDayHours(dayStart!, dayEnd!)
   const targetHours =
-    options.targetHours != null
-      ? Math.min(windowHours, Math.max(0.5, options.targetHours))
-      : windowHours
+    options.targetHours != null ? Math.max(0.5, options.targetHours) : windowHours
 
-  console.error(chalk.dim(`目标工时 ${targetHours}h（${dayStart} → ${dayEnd}）`))
+  console.error(chalk.dim(`目标工时 ${targetHours}h（以 ${dayStart} → ${dayEnd} 为准）`))
 
   const plan = await generateDailyPlan({
     role: prefs.role,
@@ -179,7 +163,7 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
     targetHours,
     sessionHours: gather.sessionHours,
     commitCount: gather.commitCount,
-    autoCopy: prefs.autoCopy,
+    autoCopy,
     noClipboard: options.noClipboard,
     print: !options.json,
   })

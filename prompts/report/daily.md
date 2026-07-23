@@ -14,14 +14,15 @@
 
 ## 规则
 
-1. items.hours 之和须等于（或略高于半小时粒度下对齐）用户设定的工时窗 targetHours（上班→下班，调整后以该时间为准）；禁止按多仓累加拉长。
-2. 单条 hours ∈ [0.5, 4]，0.5 粒度。
-3. 改写 commit：去 feat:/fix: 前缀；动词开头；业务中文。
-4. text 不含【项目】与「- X小时」。
-5. project 必须用各仓中文 display_name（如「车辆调度」「考勤」）；禁止用 KaoQin-Attendance / cldd-standard 等英文仓库名。displayNames 仅当仍无中文名时补汉字（已有则空数组）。
-6. sheetTime：单行 ≤80 字；无【】、无「小时」、无换行；用；连接。
-7. 缺口从 categories 主动型补；无 commit 时用【通用】或已知 project，勿编具体模块。
-8. Append 中的杂事/补充必须写入 items（可挂【通用】）；其中的本地路径先 `add_repo` 再写分点。
+1. items **最多 7 条**（含 Append）；宁可合并同类，禁止拆成一堆碎点。
+2. items.hours 之和须对齐 targetHours（上班→下班）；禁止按多仓累加拉长。
+3. 单条 hours ∈ [0.5, 4]，0.5 粒度。
+4. 改写 commit：去 feat:/fix: 前缀；动词开头；业务中文。
+5. text 不含【项目】与「- X小时」。
+6. project 必须用各仓中文 display_name（如「车辆调度」「考勤」）；禁止用 KaoQin-Attendance / cldd-standard 等英文仓库名。displayNames 仅当仍无中文名时补汉字（已有则空数组）。
+7. sheetTime：单行 ≤80 字；无【】、无「小时」、无换行；用；连接。
+8. 缺口从 categories 主动型补；无 commit 时用【通用】或已知 project，勿编具体模块。
+9. Append 中的杂事/补充必须写入 items（可挂【通用】）；其中的本地路径先 `add_repo` 再写分点。
 
 ## 输出
 

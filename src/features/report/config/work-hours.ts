@@ -1,12 +1,12 @@
 /**
- * 工时窗：用户设定为准（调整后写回 setting，全日目标 = 该窗时长）。
- * 封顶 09:00→22:00；默认 09:00→21:00。多仓不累加。
+ * 工时窗：用户调整优先级最高，不受默认封顶限制。
+ * 默认建议 09:00→21:00；目标工时 = 下班 − 上班（写多少用多少）。
  */
 import * as p from '@clack/prompts'
 import chalk from 'chalk'
 import { loadSetting, writeSetting } from './setting'
 
-/** 绝对最早上班 / 最晚下班（封顶） */
+/** 仅作默认建议，不限制用户调整 */
 export const DAY_FLOOR = '09:00'
 export const DAY_CEILING = '22:00'
 
@@ -23,10 +23,22 @@ export function formatHm(mins: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-export function clampHm(hm: string, floor: string, ceiling: string): string {
-  const t = TIME_RE.test(hm.trim()) ? hm.trim() : floor
-  const n = parseHm(t)
-  return formatHm(Math.min(parseHm(ceiling), Math.max(parseHm(floor), n)))
+/** 规范化 HH:MM（0–23:59），不按 09–22 封顶裁剪 */
+export function normalizeHm(hm: string, fallback = '09:00'): string {
+  const t = (hm || '').trim()
+  if (!TIME_RE.test(t)) return fallback
+  const [hs, ms] = t.split(':')
+  const h = parseInt(hs!, 10)
+  const m = parseInt(ms!, 10)
+  if (Number.isNaN(h) || Number.isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+    return fallback
+  }
+  return formatHm(h * 60 + m)
+}
+
+/** @deprecated 保留给旧调用；用户窗请用 normalizeHm，勿再按封顶 clamp */
+export function clampHm(hm: string, _floor: string, _ceiling: string): string {
+  return normalizeHm(hm, _floor)
 }
 
 /** 两时刻差（小时），半小时粒度 */
@@ -35,12 +47,12 @@ export function hoursBetween(startHm: string, endHm: string): number {
   return Math.round((mins / 60) * 2) / 2
 }
 
-/** 用户设定窗的目标工时（以调整时间为准） */
+/** 以用户设定为准，不截 13h、不套 09–22 封顶 */
 export function maxDayHours(dayStart: string, dayEnd: string): number {
-  const start = clampHm(dayStart, DAY_FLOOR, DAY_CEILING)
-  const end = clampHm(dayEnd, DAY_FLOOR, DAY_CEILING)
+  const start = normalizeHm(dayStart, DAY_FLOOR)
+  const end = normalizeHm(dayEnd, '21:00')
   if (parseHm(end) <= parseHm(start)) return 0.5
-  return Math.min(13, Math.max(0.5, hoursBetween(start, end)))
+  return Math.max(0.5, hoursBetween(start, end))
 }
 
 function abort(v: unknown): asserts v is string {
@@ -52,12 +64,8 @@ function abort(v: unknown): asserts v is string {
 
 async function askClock(message: string, current: string, presets: string[]): Promise<string> {
   const options = [
-    ...presets.map((t) => ({
-      value: t,
-      label: t,
-      hint: t === DAY_FLOOR ? '封顶最早' : t === DAY_CEILING ? '封顶最晚' : undefined,
-    })),
-    { value: '__custom', label: '自定义…', hint: '手动输入 HH:MM' },
+    ...presets.map((t) => ({ value: t, label: t })),
+    { value: '__custom', label: '自定义…', hint: '任意 HH:MM，不受默认建议限制' },
   ]
   const initial = presets.includes(current) ? current : '__custom'
   const picked = await p.select({
@@ -67,55 +75,49 @@ async function askClock(message: string, current: string, presets: string[]): Pr
   })
   abort(picked)
 
-  if (picked !== '__custom') return clampHm(picked, DAY_FLOOR, DAY_CEILING)
+  if (picked !== '__custom') return normalizeHm(picked, current)
 
   const raw = await p.text({
-    message: `${message}（HH:MM，范围 ${DAY_FLOOR}–${DAY_CEILING}）`,
+    message: `${message}（HH:MM，你设多少用多少）`,
     placeholder: current,
     defaultValue: current,
     validate: (v) => {
       const t = (v ?? '').trim()
-      if (!TIME_RE.test(t)) return '格式须为 HH:MM，如 21:00'
-      const n = parseHm(t)
-      if (n < parseHm(DAY_FLOOR) || n > parseHm(DAY_CEILING)) {
-        return `须在 ${DAY_FLOOR}–${DAY_CEILING} 之间`
-      }
+      if (!TIME_RE.test(t)) return '格式须为 HH:MM，如 08:30 / 23:00'
+      const [hs, ms] = t.split(':')
+      const h = parseInt(hs!, 10)
+      const m = parseInt(ms!, 10)
+      if (h < 0 || h > 23 || m < 0 || m > 59) return '小时 0–23，分钟 0–59'
       return undefined
     },
   })
   abort(raw)
-  return clampHm(String(raw), DAY_FLOOR, DAY_CEILING)
+  return normalizeHm(String(raw), current)
 }
 
 /**
- * 交互调整工时窗；调整后写回 setting，后续 gather / 目标工时一律以该窗为准。
+ * 交互调整工时窗。调整后写回 setting；目标工时完全以该窗为准。
  */
 export async function promptWorkWindow(opts: {
   dayStart?: string
   dayEnd?: string
 } = {}): Promise<{ dayStart: string; dayEnd: string; maxHours: number }> {
   const setting = loadSetting()
-  let dayStart = clampHm(
-    opts.dayStart || setting.day_start_max || DAY_FLOOR,
-    DAY_FLOOR,
-    DAY_CEILING,
-  )
-  let dayEnd = clampHm(
-    opts.dayEnd || setting.day_end_min || '21:00',
-    DAY_FLOOR,
-    DAY_CEILING,
-  )
-  if (parseHm(dayEnd) <= parseHm(dayStart)) dayEnd = DAY_CEILING
+  let dayStart = normalizeHm(opts.dayStart || setting.day_start_max || DAY_FLOOR, DAY_FLOOR)
+  let dayEnd = normalizeHm(opts.dayEnd || setting.day_end_min || '21:00', '21:00')
+  if (parseHm(dayEnd) <= parseHm(dayStart)) {
+    dayEnd = normalizeHm('21:00')
+  }
 
   if (!process.stdin.isTTY) {
     return { dayStart, dayEnd, maxHours: maxDayHours(dayStart, dayEnd) }
   }
 
   console.log('')
-  console.log(chalk.cyan('工时窗（调整后以你设的时间为准）'))
+  console.log(chalk.cyan('工时窗（你调整的时间优先级最高，不受默认封顶限制）'))
   console.log(
     chalk.dim(
-      `  今日日报总工时 = 下班 − 上班；多仓不累加。封顶 ${DAY_FLOOR} → ${DAY_CEILING}`,
+      `  总工时 = 下班 − 上班；多仓不累加。默认建议 ${DAY_FLOOR}→21:00（可改成任意 HH:MM）`,
     ),
   )
 
@@ -136,15 +138,20 @@ export async function promptWorkWindow(opts: {
   abort(action)
 
   if (action === 'start' || action === 'both') {
-    dayStart = await askClock('上班时间', dayStart, ['09:00', '09:30', '10:00'])
+    dayStart = await askClock('上班时间', dayStart, ['08:30', '09:00', '09:30', '10:00'])
   }
   if (action === 'end' || action === 'both') {
-    dayEnd = await askClock('下班时间', dayEnd, ['20:30', '21:00', '21:30', '22:00'])
+    dayEnd = await askClock('下班时间', dayEnd, ['20:30', '21:00', '21:30', '22:00', '23:00'])
   }
 
   if (parseHm(dayEnd) <= parseHm(dayStart)) {
-    console.log(chalk.yellow(`下班须晚于上班，已把下班调到 ${DAY_CEILING}`))
-    dayEnd = DAY_CEILING
+    console.log(chalk.yellow('下班须晚于上班，请重新设下班时间'))
+    dayEnd = await askClock('下班时间', dayEnd, ['20:30', '21:00', '21:30', '22:00', '23:00'])
+    if (parseHm(dayEnd) <= parseHm(dayStart)) {
+      // 仍不合法：自动 +8h 兜底，避免卡死
+      dayEnd = formatHm(Math.min(23 * 60 + 59, parseHm(dayStart) + 8 * 60))
+      console.log(chalk.yellow(`仍无效，已临时设为 ${dayStart} → ${dayEnd}`))
+    }
   }
 
   setting.day_start_max = dayStart
@@ -152,6 +159,6 @@ export async function promptWorkWindow(opts: {
   writeSetting(setting)
 
   const maxHours = maxDayHours(dayStart, dayEnd)
-  console.log(chalk.green(`→ 以 ${dayStart} → ${dayEnd} 为准（目标 ${maxHours}h）`))
+  console.log(chalk.green(`→ 以你设的 ${dayStart} → ${dayEnd} 为准（目标 ${maxHours}h）`))
   return { dayStart, dayEnd, maxHours }
 }

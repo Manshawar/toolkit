@@ -2,12 +2,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { execSync } from 'child_process'
-import {
-  DAY_CEILING,
-  DAY_FLOOR,
-  clampHm,
-  hoursBetween,
-} from '../config/work-hours'
+import { hoursBetween, normalizeHm } from '../config/work-hours'
 
 export function tryExec(cmd: string): string {
   try {
@@ -59,10 +54,7 @@ export function daySessionHours(
   dayStartMax = '09:00',
   dayEndMin = '21:00',
 ): number {
-  return hoursBetween(
-    clampHm(dayStartMax, DAY_FLOOR, DAY_CEILING),
-    clampHm(dayEndMin, DAY_FLOOR, DAY_CEILING),
-  )
+  return hoursBetween(normalizeHm(dayStartMax), normalizeHm(dayEndMin, '21:00'))
 }
 
 /** @deprecated 用 daySessionHours；保留别名避免旧引用 */
