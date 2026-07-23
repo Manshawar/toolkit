@@ -39,6 +39,9 @@ export interface GenerateObjectOptions<SCHEMA extends z.ZodType> {
   tools?: ToolSet
   /** 含 tool 调用的最大步数，默认有 tools 时 6、否则 1 */
   maxSteps?: number
+  /** Output.object 名称（网关 JSON Schema） */
+  name?: string
+  description?: string
 }
 
 export interface AiClient {
@@ -100,7 +103,7 @@ export async function createAiClient(config?: AiConfig): Promise<AiClient> {
     async generateObject<SCHEMA extends z.ZodType>(
       opts: GenerateObjectOptions<SCHEMA>,
     ): Promise<z.infer<SCHEMA>> {
-      const { schema, system, user, tools, maxSteps } = opts
+      const { schema, system, user, tools, maxSteps, name, description } = opts
       const { model } = await resolve()
       // structured output 本身占 1 step；留足 tool 轮次
       const steps = maxSteps ?? (tools && Object.keys(tools).length > 0 ? 8 : 1)
@@ -111,8 +114,8 @@ export async function createAiClient(config?: AiConfig): Promise<AiClient> {
             model,
             output: Output.object({
               schema,
-              name: 'CommitPlan',
-              description: 'Git commit plan with messages and file paths',
+              name: name ?? 'StructuredOutput',
+              description: description ?? 'Structured JSON output',
             }),
             instructions: system,
             messages: [{ role: 'user', content: user }],
