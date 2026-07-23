@@ -10,12 +10,10 @@
 | Skill | `tkt agent git-submit prepare \| apply` | 宿主 Agent；CLI 只校验+执行 |
 
 ```bash
-# 本地（启动时询问是否自动推送）
+# 本地（首次询问自动推送，之后记住）
 tkt gc
-
-# 跳过询问
-tkt gc --push      # 自动推送
-tkt gc --no-push   # 只 commit 不推送
+tkt gc --push      # 开启并记住
+tkt gc --no-push   # 关闭并记住
 
 # AI 配置（空回车保留原值）
 tkt config
@@ -44,6 +42,7 @@ src/
   index.ts              CLI 入口
   ai/                   Vercel AI SDK（本地环）
   lib/                  共享：env / git / cli 契约
+  ui/                   CLI 等待动画（spinner）
   tools/                AI tools（按场景加载）
     git-submit/         commit-plan 等
   features/             功能区（一命令一目录）

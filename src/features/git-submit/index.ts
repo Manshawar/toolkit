@@ -13,7 +13,7 @@ import {
   emitJson,
   GitSubmitResultSchema,
 } from '../../lib/cli'
-import { askAutoPush } from './ask'
+import { printAutoPushStatus, resolveAutoPush } from './ask'
 import { GitSubmitError } from './errors'
 import { runWorkflow } from './run'
 import { CommitPlanSchema, type CommitPlan, type GitSubmitOptions } from './types'
@@ -109,25 +109,6 @@ function failAgent(e: unknown): void {
   process.exitCode = 1
 }
 
-/**
- * 解析推送开关：
- * - `--push` → 开启
- * - `--no-push` → 关闭
- * - 皆无 → 询问用户（json/dry-run/非 TTY 默认关闭）
- */
-async function resolveNoPush(opts: {
-  push?: boolean
-  noPush?: boolean
-  json?: boolean
-  dryRun?: boolean
-}): Promise<boolean> {
-  if (opts.push) return false
-  if (opts.noPush) return true
-  if (opts.json || opts.dryRun || !process.stdin.isTTY) return true
-  const enable = await askAutoPush()
-  return !enable
-}
-
 /** 注册 `tkt gc` + `tkt agent …` */
 export function registerGitSubmitCommands(program: Command): void {
   program
@@ -135,19 +116,17 @@ export function registerGitSubmitCommands(program: Command): void {
     .description('AI 提交：Pull → CommitPlan → Commit（可选 Push）')
     .option('--dry-run', '不提交不推送')
     .option('--no-pull', '跳过 pull')
-    .addOption(new Option('--push', '自动推送（跳过询问）'))
-    .addOption(new Option('--no-push', '不推送（跳过询问）'))
+    .addOption(new Option('--push', '开启自动推送并记住'))
+    .addOption(new Option('--no-push', '关闭自动推送并记住'))
     .option('--json', 'JSON 结果')
     .action(async (opts) => {
-      const noPush = await resolveNoPush({
+      const { noPush, enable } = await resolveAutoPush({
         push: Boolean(opts.push),
         noPush: Boolean(opts.noPush),
         json: Boolean(opts.json),
         dryRun: Boolean(opts.dryRun),
       })
-      if (!opts.json) {
-        console.log(chalk.dim(noPush ? '→ 不推送' : '→ 自动推送'))
-      }
+      if (!opts.json) printAutoPushStatus(enable)
       await runGitSubmit({
         ai: 'local',
         dryRun: Boolean(opts.dryRun),
