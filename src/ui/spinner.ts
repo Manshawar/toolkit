@@ -1,7 +1,7 @@
 /**
  * CLI 等待动画：
  * - createSpinner / withSpinner：ora 行内（collect / commit / push）
- * - createCatRun / withCatRun：居中「思考中」+ 机器人颜文字轮换（AI analyze）
+ * - createCatRun / withCatRun：状态栏「→ 思考中」+ 下一行机器人颜文字切换（AI analyze）
  *
  * 颜文字参考：https://kaomojis.jp/zh/search?q=%E6%9C%BA%E5%99%A8%E4%BA%BA
  *
@@ -29,11 +29,8 @@ export interface SpinnerOptions {
 
 export const CAT_FACE = '(=^･ω･^=)'
 
-/** 标题行固定露出的机器人字样 */
-const THINK_MARK = '⟦◕ω◕⟧ﾉ~'
-
 /**
- * 思考中 · 机器人颜文字（居中轮换，不跑马）
+ * 状态栏下一行切换的机器人颜文字
  * @see https://kaomojis.jp/zh/search?q=%E6%9C%BA%E5%99%A8%E4%BA%BA
  */
 const ROBOT_KAOMOJI = [
@@ -55,10 +52,9 @@ const ROBOT_KAOMOJI = [
   '╰(◕ω◕)╯⚙',
 ]
 
-const THINK_DOTS = ['·  ', '·· ', '···', '·· ', '·  ', '   ']
-
+/** 状态栏 2 行：→ 思考中 / 颜文字 */
 const THINK_HEIGHT = 2
-const THINK_INTERVAL_MS = 420
+const THINK_INTERVAL_MS = 450
 
 const ORA_SPINNER = {
   interval: 120,
@@ -87,9 +83,10 @@ function displayWidth(s: string): number {
   return w
 }
 
-function centerLine(s: string, cols: number): string {
-  const pad = Math.max(0, Math.floor((cols - displayWidth(s)) / 2))
-  return `${' '.repeat(pad)}${s}`
+const ROBOT_PAD = Math.max(...ROBOT_KAOMOJI.map(displayWidth))
+
+function padRobot(face: string): string {
+  return face + ' '.repeat(Math.max(0, ROBOT_PAD - displayWidth(face)))
 }
 
 function shouldQuiet(explicit?: boolean): boolean {
@@ -191,9 +188,9 @@ function createOraSpinner(label: string): Spinner {
 }
 
 /**
- * 两行固定区域、居中变化（不跑马）：
- *   思考中···  ⟦◕ω◕⟧ﾉ~
- *        ⟦●‿●⟧~
+ * 对齐 pull/diff 状态栏：
+ *   → 思考中
+ *   ⟦◕ω◕⟧ﾉ~     ← 仅这一行切换颜文字
  */
 function createCatRunSpinner(label: string): Spinner {
   let status: SpinnerStatus = 'idle'
@@ -224,16 +221,10 @@ function createCatRunSpinner(label: string): Spinner {
   }
 
   const paint = () => {
-    const cols = process.stdout.columns ?? 80
-    const dots = THINK_DOTS[frame % THINK_DOTS.length]
-    const face = ROBOT_KAOMOJI[frame % ROBOT_KAOMOJI.length]
-    const title = `思考中${dots}  ${THINK_MARK}`
-    const lines = [centerLine(title, cols), centerLine(face, cols)]
-
+    const face = padRobot(ROBOT_KAOMOJI[frame % ROBOT_KAOMOJI.length])
     process.stdout.write(`\x1b[${THINK_HEIGHT}A`)
-    for (let i = 0; i < THINK_HEIGHT; i++) {
-      process.stdout.write(`\x1b[2K\r${chalk.magenta(lines[i] ?? '')}\n`)
-    }
+    process.stdout.write(`\x1b[2K\r${chalk.dim('→ 思考中')}\n`)
+    process.stdout.write(`\x1b[2K\r${chalk.magenta(face)}\n`)
     frame++
   }
 
@@ -289,7 +280,7 @@ export function createSpinner(label = '', opts: SpinnerOptions = {}): Spinner {
   return createOraSpinner(label)
 }
 
-/** AI 分析用：居中思考中动效 */
+/** AI 分析用：状态栏思考中 + 颜文字切换 */
 export function createCatRun(label = '', opts: SpinnerOptions = {}): Spinner {
   if (shouldQuiet(opts.quiet)) return noopSpinner()
   return createCatRunSpinner(label)
