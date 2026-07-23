@@ -5,7 +5,7 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { mountBenchRoutes } from '../features/bench/routes'
-import { ENV_BASE, normalizeApiRoot, readEnv } from '../features/bench/lib'
+import { gatewayConfigPath, normalizeApiRoot, readEnv } from '../features/bench/lib'
 import * as watch from '../features/bench/watch'
 import type { FeatureMount } from './types'
 
@@ -34,16 +34,13 @@ export function startUiServer({ port = DEFAULT_PORT }: { port?: number } = {}): 
     const url = `http://127.0.0.1:${info.port}/bench`
     console.log(`tkt ui → ${url}`)
     if (env.missing.length) {
-      console.log(
-        `WARN: missing ${env.missing.join(', ')} — run \`tkt config\`, then restart ui.`,
-      )
+      console.log(`WARN: 未配置网关 — 打开页面填写 URL/Key，将写入 ${gatewayConfigPath()}`)
     } else {
       try {
-        console.log(`API root: ${normalizeApiRoot(env.baseUrl!)}`)
+        console.log(`API root: ${normalizeApiRoot(env.baseUrl!)} · source=${env.source}`)
       } catch (e) {
         console.log(`WARN: ${e instanceof Error ? e.message : String(e)}`)
       }
-      console.log(`env: ${ENV_BASE} / AI_API_KEY`)
     }
     const st = watch.getStatus()
     if (st.enabled) {
