@@ -65,7 +65,7 @@ export const stepAnalyze: Step = async (ctx) => {
   }
 
   const quiet = Boolean(ctx.options.json)
-  // 单独空行：小猫往前跑，等 AI 出 CommitPlan
+  // 居中「思考中」+ 机器人颜文字，等 AI 出 CommitPlan
   const plan = await withCatRun(
     'analyze',
     async () => {
