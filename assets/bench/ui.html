@@ -171,17 +171,20 @@
 
     <section class="panel" id="health-panel">
       <div class="row">
-        <strong id="health-title">检查环境…</strong>
-        <button type="button" class="secondary" id="btn-reload-health">刷新状态</button>
+        <strong id="health-title">网关配置</strong>
+        <button type="button" class="secondary" id="btn-reload-health">刷新</button>
       </div>
+      <div class="row" style="margin-top:10px;align-items:stretch;width:100%">
+        <label class="row" style="flex:1;min-width:240px">Base URL
+          <input class="grow" type="text" id="cfg-base" placeholder="https://ai-gateway.example.com" autocomplete="off" />
+        </label>
+        <label class="row" style="flex:1;min-width:200px">API Key
+          <input class="grow" type="password" id="cfg-key" placeholder="留空=不改已保存的 Key" autocomplete="off" />
+        </label>
+        <button type="button" id="btn-save-config">保存</button>
+      </div>
+      <p class="hint">保存到本机 <code id="cfg-path">~/.config/tkt/bench/gateway.json</code>，仅本机测速用，不进仓库。</p>
       <div class="status" id="health-msg"></div>
-      <div class="setup hidden" id="setup-help">
-        <ol>
-          <li>执行 <code>tkt config</code> 填写 <code id="env-base-name">AI_BASE_URL</code> / <code id="env-key-name">AI_API_KEY</code></li>
-          <li>勿把 Key 发到聊天</li>
-          <li>然后执行 <code>tkt ui</code> 或 <code>tkt bench ui</code></li>
-        </ol>
-      </div>
     </section>
 
     <section class="panel">
@@ -442,27 +445,30 @@
     async function loadHealth() {
       const title = $('health-title');
       const msg = $('health-msg');
-      const help = $('setup-help');
       try {
         const res = await fetch('/api/bench/health');
         const h = await res.json();
-        $('env-base-name').textContent = h.envBase || 'AI_BASE_URL';
-        $('env-key-name').textContent = h.envKey || 'AI_API_KEY';
+        if (h.configPath) $('cfg-path').textContent = h.configPath;
+        if (h.baseUrl) $('cfg-base').value = h.baseUrl;
+        $('cfg-key').value = '';
+        $('cfg-key').placeholder = h.apiKeyMasked
+          ? ('已保存 ' + h.apiKeyMasked + ' · 留空不改')
+          : '粘贴 API Key';
         if (h.ok) {
-          title.textContent = '环境已就绪';
+          title.textContent = '网关已就绪';
           msg.className = 'status ok';
-          msg.textContent = 'API root: ' + (h.apiRoot || '');
-          help.classList.add('hidden');
+          msg.textContent = 'API root: ' + (h.apiRoot || '') + ' · source=' + (h.source || '');
           ready = true;
           setControls(true);
           await loadModels();
         } else {
           ready = false;
           setControls(false);
-          title.textContent = '缺少环境变量';
+          title.textContent = '请配置网关';
           msg.className = 'status bad';
-          msg.textContent = 'missing: ' + (h.missing || []).join(', ') + (h.error ? ('\n' + h.error) : '');
-          help.classList.remove('hidden');
+          msg.textContent = (h.missing && h.missing.length)
+            ? ('缺少: ' + h.missing.join(', '))
+            : (h.error || '填写上方 URL / Key 后点保存');
         }
       } catch (e) {
         ready = false;
@@ -470,10 +476,31 @@
         title.textContent = '无法连接本地服务';
         msg.className = 'status bad';
         msg.textContent = String(e.message || e);
-        help.classList.remove('hidden');
       }
       await refreshWatch();
       startWatchPoll();
+    }
+
+    async function saveConfig() {
+      const baseUrl = $('cfg-base').value.trim();
+      const apiKey = $('cfg-key').value;
+      $('health-msg').className = 'status';
+      $('health-msg').textContent = '保存中…';
+      try {
+        const res = await fetch('/api/bench/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ baseUrl, apiKey }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+        $('health-msg').className = 'status ok';
+        $('health-msg').textContent = '已保存 → ' + (data.saved || data.configPath || '');
+        await loadHealth();
+      } catch (e) {
+        $('health-msg').className = 'status bad';
+        $('health-msg').textContent = String(e.message || e);
+      }
     }
 
     function setControls(on) {
@@ -649,6 +676,7 @@
     }
 
     $('btn-reload-health').onclick = loadHealth;
+    $('btn-save-config').onclick = saveConfig;
     $('btn-models').onclick = loadModels;
     $('btn-bench').onclick = runBench;
     $('btn-all').onclick = () => {

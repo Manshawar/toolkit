@@ -7,13 +7,14 @@ import * as path from 'path'
 import { dataDir, ensureDataDir } from '../../core/paths'
 
 export const BENCH_ARG = 'bench'
-export const ENV_BASE = 'AI_BASE_URL'
-export const ENV_KEY = 'AI_API_KEY'
 
 export type GatewayEnv = {
   baseUrl: string | null
   apiKey: string | null
   missing: string[]
+  /** file = gateway.json；env = 进程环境；none = 都没有 */
+  source: 'file' | 'env' | 'none'
+  configPath: string
 }
 
 export type StreamSample = {
@@ -70,20 +71,81 @@ export function ensureConfigDir(): string {
   return ensureDataDir(BENCH_ARG)
 }
 
+export function gatewayConfigPath(): string {
+  return path.join(configDir(), 'gateway.json')
+}
+
+type GatewayFile = { baseUrl?: string; apiKey?: string }
+
+function readGatewayFile(): GatewayFile | null {
+  try {
+    const raw = fs.readFileSync(gatewayConfigPath(), 'utf8')
+    return JSON.parse(raw) as GatewayFile
+  } catch {
+    return null
+  }
+}
+
+/** 优先 ~/.config/tkt/bench/gateway.json，其次进程 env（CLI 临时覆盖） */
 export function readEnv(): GatewayEnv {
-  const baseUrl = (process.env[ENV_BASE] || '').trim() || null
-  const apiKey = (process.env[ENV_KEY] || '').trim() || null
+  const configPath = gatewayConfigPath()
+  const file = readGatewayFile()
+  const fileBase = file?.baseUrl?.trim() || null
+  const fileKey = file?.apiKey?.trim() || null
+  if (fileBase && fileKey) {
+    return { baseUrl: fileBase, apiKey: fileKey, missing: [], source: 'file', configPath }
+  }
+
+  const envBase = (process.env.AI_BASE_URL || '').trim() || null
+  const envKey = (process.env.AI_API_KEY || '').trim() || null
+  if (envBase && envKey) {
+    return { baseUrl: envBase, apiKey: envKey, missing: [], source: 'env', configPath }
+  }
+
+  const baseUrl = fileBase || envBase
+  const apiKey = fileKey || envKey
   const missing: string[] = []
-  if (!baseUrl) missing.push(ENV_BASE)
-  if (!apiKey) missing.push(ENV_KEY)
-  return { baseUrl, apiKey, missing }
+  if (!baseUrl) missing.push('baseUrl')
+  if (!apiKey) missing.push('apiKey')
+  return {
+    baseUrl,
+    apiKey,
+    missing,
+    source: 'none',
+    configPath,
+  }
+}
+
+export function saveGatewayConfig(input: { baseUrl: string; apiKey?: string }): GatewayEnv {
+  ensureConfigDir()
+  const prev = readGatewayFile() || {}
+  const baseUrl = input.baseUrl.trim()
+  if (!baseUrl) throw new Error('baseUrl 不能为空')
+  const apiKey =
+    input.apiKey !== undefined && input.apiKey.trim()
+      ? input.apiKey.trim()
+      : (prev.apiKey || '').trim()
+  if (!apiKey) throw new Error('apiKey 不能为空')
+  normalizeApiRoot(baseUrl)
+  fs.writeFileSync(
+    gatewayConfigPath(),
+    JSON.stringify({ baseUrl, apiKey }, null, 2) + '\n',
+    'utf8',
+  )
+  return readEnv()
+}
+
+export function maskApiKey(key: string | null): string | null {
+  if (!key) return null
+  if (key.length <= 8) return '*'.repeat(key.length)
+  return `${key.slice(0, 3)}…${key.slice(-4)}`
 }
 
 /** Normalize to API root ending with /v1 */
 export function normalizeApiRoot(baseUrl: string): string {
   let u = String(baseUrl).trim().replace(/\/+$/, '')
   if (!/^https?:\/\//i.test(u)) {
-    throw new Error(`Invalid ${ENV_BASE}: must start with http:// or https://`)
+    throw new Error('Invalid baseUrl: must start with http:// or https://')
   }
   if (!/\/v1$/i.test(u)) u = `${u}/v1`
   return u
@@ -521,7 +583,7 @@ export class EnvMissingError extends Error {
   code = 'ENV_MISSING' as const
   missing: string[]
   constructor(missing: string[]) {
-    super(`Missing env: ${missing.join(', ')}`)
+    super(`Missing gateway config: ${missing.join(', ')}（UI 保存或写 gateway.json）`)
     this.missing = missing
   }
 }

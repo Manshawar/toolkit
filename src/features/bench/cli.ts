@@ -2,11 +2,10 @@
  * CLI：`tkt bench [opts]`
  */
 import {
-  ENV_BASE,
-  ENV_KEY,
   benchModels,
   fetchModels,
   formatRankTable,
+  gatewayConfigPath,
   normalizeApiRoot,
   readEnv,
   saveHistory,
@@ -25,10 +24,11 @@ export type BenchCliOpts = {
   staggerMs?: number
 }
 
-function printEnvHelp(): void {
-  console.error(`缺少 AI 配置。请执行: tkt config`)
-  console.error(`  ${ENV_BASE}   网关根，如 https://ai-gateway.example.com`)
-  console.error(`  ${ENV_KEY}    Bearer token（勿粘贴到聊天）`)
+function printConfigHelp(): void {
+  console.error(`缺少网关配置。任选其一：`)
+  console.error(`  1) tkt ui → 打开 /bench，在页面填写 Base URL / API Key 并保存`)
+  console.error(`  2) 写入 ${gatewayConfigPath()}`)
+  console.error(`     {"baseUrl":"https://ai-gateway.example.com","apiKey":"…"}`)
 }
 
 export async function runBenchCli(opts: BenchCliOpts = {}): Promise<void> {
@@ -47,7 +47,7 @@ export async function runBenchCli(opts: BenchCliOpts = {}): Promise<void> {
 
   const env = readEnv()
   if (env.missing.length) {
-    printEnvHelp()
+    printConfigHelp()
     process.exitCode = 2
     return
   }

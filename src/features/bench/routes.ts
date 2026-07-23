@@ -6,14 +6,15 @@ import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { assetPath } from '../../core/paths'
 import {
-  ENV_BASE,
-  ENV_KEY,
   EnvMissingError,
   benchModels,
   fetchModels,
+  gatewayConfigPath,
+  maskApiKey,
   normalizeApiRoot,
   readEnv,
   requireGateway,
+  saveGatewayConfig,
   saveHistory,
 } from './lib'
 import * as watch from './watch'
@@ -30,33 +31,58 @@ export function createBenchPageRoutes(): Hono {
   return app
 }
 
+function healthPayload() {
+  const env = readEnv()
+  let apiRoot: string | null = null
+  let error: string | undefined
+  try {
+    if (env.baseUrl) apiRoot = normalizeApiRoot(env.baseUrl)
+  } catch (e) {
+    error = e instanceof Error ? e.message : String(e)
+  }
+  return {
+    ok: env.missing.length === 0 && !error,
+    missing: env.missing,
+    source: env.source,
+    configPath: env.configPath,
+    baseUrl: env.baseUrl,
+    apiKeyMasked: maskApiKey(env.apiKey),
+    hasBase: Boolean(env.baseUrl),
+    hasKey: Boolean(env.apiKey),
+    apiRoot,
+    error,
+  }
+}
+
 /** API：挂在 /api/bench */
 export function createBenchApiRoutes(): Hono {
   const app = new Hono()
 
-  app.get('/health', (c) => {
-    const env = readEnv()
-    let apiRoot: string | null = null
+  app.get('/health', (c) => c.json(healthPayload()))
+
+  app.get('/config', (c) => c.json(healthPayload()))
+
+  app.post('/config', async (c) => {
     try {
-      if (env.baseUrl) apiRoot = normalizeApiRoot(env.baseUrl)
-    } catch (e) {
-      return c.json({
-        ok: false,
-        missing: env.missing,
-        envBase: ENV_BASE,
-        envKey: ENV_KEY,
-        error: e instanceof Error ? e.message : String(e),
+      const body = (await c.req.json().catch(() => ({}))) as {
+        baseUrl?: string
+        apiKey?: string
+      }
+      if (typeof body.baseUrl !== 'string' || !body.baseUrl.trim()) {
+        return c.json({ error: 'baseUrl 必填' }, 400)
+      }
+      const env = saveGatewayConfig({
+        baseUrl: body.baseUrl,
+        apiKey: typeof body.apiKey === 'string' ? body.apiKey : undefined,
       })
+      return c.json({
+        ok: true,
+        ...healthPayload(),
+        saved: env.configPath || gatewayConfigPath(),
+      })
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : String(e) }, 400)
     }
-    return c.json({
-      ok: env.missing.length === 0,
-      missing: env.missing,
-      envBase: ENV_BASE,
-      envKey: ENV_KEY,
-      hasBase: Boolean(env.baseUrl),
-      hasKey: Boolean(env.apiKey),
-      apiRoot,
-    })
   })
 
   app.get('/models', async (c) => {
@@ -180,8 +206,7 @@ function handleApiError(c: { json: (obj: unknown, status?: number) => Response }
       {
         error: e.message,
         missing: e.missing,
-        envBase: ENV_BASE,
-        envKey: ENV_KEY,
+        configPath: gatewayConfigPath(),
       },
       503,
     )
