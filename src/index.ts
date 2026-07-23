@@ -6,6 +6,7 @@
  * src/
  *   ai/                 Vercel AI SDK（本地环）
  *   lib/                共享：env / git / cli 契约
+ *   ui/                 CLI 等待动画
  *   tools/              AI tools（按场景加载）
  *   features/           功能区（一命令一目录）
  *     git-submit/       tkt gc + tkt agent
