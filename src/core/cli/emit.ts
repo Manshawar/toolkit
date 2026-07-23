@@ -1,23 +1,6 @@
-/** 标准化 stdout：envelope / JSON / error */
+/** 标准化 stdout：JSON / error */
 import type { z } from 'zod'
-import {
-  AgentEnvelopeSchema,
-  CliErrorSchema,
-  type AgentEnvelope,
-  type AgentEnvelopeInput,
-  type CliError,
-} from './schema'
-
-export const AGENT_MARKER_BEGIN = '--- tkt-ai-agent-begin ---'
-export const AGENT_MARKER_END = '--- tkt-ai-agent-end ---'
-
-export function emitAgentEnvelope(input: AgentEnvelopeInput): AgentEnvelope {
-  const envelope = AgentEnvelopeSchema.parse(input)
-  console.log(AGENT_MARKER_BEGIN)
-  console.log(JSON.stringify(envelope))
-  console.log(AGENT_MARKER_END)
-  return envelope
-}
+import { CliErrorSchema, type CliError } from './schema'
 
 export function emitJson<T>(schema: z.ZodType<T>, input: unknown): T {
   const data = schema.parse(input)

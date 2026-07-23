@@ -3,7 +3,7 @@
  * 默认主 prompt 截断；过长内容经 tool 分页多次吞吐。
  */
 
-/** 单文件喂给主 agent 的压缩后上限（默认截断） */
+/** 单文件喂给主模型的压缩后上限（默认截断） */
 export const MAX_PATCH = 2000
 /** 主 prompt 总 Diff 预算 */
 export const MAX_SUMMARY = 16000

@@ -30,18 +30,10 @@ async function runSteps(ctx: GitSubmitContext, steps: Step[]): Promise<GitSubmit
 
 export async function runWorkflow(options: GitSubmitOptions): Promise<GitSubmitContext> {
   try {
-    // agent 且无 plan → 自动 prepare
-    if (options.ai === 'agent' && !options.commitPlan && !options.prepare) {
-      options = { ...options, prepare: true }
-    }
-
     const steps: Step[] = []
     if (!options.noPull) steps.push(stepPull)
-    steps.push(stepConflict, stepDiff, stepHistory, stepAnalyze)
-    if (!options.prepare) {
-      steps.push(stepCommit)
-      if (!options.noPush) steps.push(stepPush)
-    }
+    steps.push(stepConflict, stepDiff, stepHistory, stepAnalyze, stepCommit)
+    if (!options.noPush) steps.push(stepPush)
 
     return await runSteps(await createContext(options), steps)
   } catch (e) {

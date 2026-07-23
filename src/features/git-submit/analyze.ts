@@ -1,70 +1,20 @@
 /**
- * 生成 CommitPlan：
- * - 已有 plan（Skill apply）→ 校验后沿用
- * - prepare → 输出 AgentEnvelope
- * - local → AI SDK；大 diff 默认截断，必要时 deep_inspect_diff 分页吞吐
+ * 本地 AI SDK 生成 CommitPlan；大 diff 默认截断，必要时 deep_inspect_diff 分页吞吐。
  */
 import chalk from 'chalk'
 import { createAiClient } from '../../ai'
-import { emitAgentEnvelope, parseWithSchema } from '../../core/cli'
 import { loadTools } from '../../tools'
 import { withCatRun } from '../../ui'
 import { GitSubmitError } from './errors'
-import {
-  COMMIT_PLAN_PROMPT_ID,
-  buildCommitPlanUser,
-  loadAgentPrepareInstruction,
-  loadCommitPlanSystem,
-} from './prompt'
+import { buildCommitPlanUser, loadCommitPlanSystem } from './prompt'
 import { CommitPlanSchema, type Step } from './types'
 
 export const stepAnalyze: Step = async (ctx) => {
   if (!ctx.diff || !ctx.style) throw new GitSubmitError('缺少 diff 或 style')
 
-  const promptId = COMMIT_PLAN_PROMPT_ID
   const user = buildCommitPlanUser(ctx.style, ctx.diff.summary)
-  const context = {
-    repo: ctx.repo,
-    branch: ctx.branch,
-    style: ctx.style,
-    files: ctx.diff.files.map((f) => ({
-      path: f.path,
-      status: f.status,
-      additions: f.additions,
-      deletions: f.deletions,
-      truncated: f.truncated,
-      compressedLen: f.compressedLen,
-    })),
-    diffSummary: ctx.diff.summary,
-    user,
-  }
-
-  if (ctx.options.commitPlan) {
-    const plan = parseWithSchema(CommitPlanSchema, ctx.options.commitPlan, 'CommitPlan')
-    logPlan(plan)
-    return { ...ctx, commitPlan: plan }
-  }
-
-  if (ctx.options.ai === 'agent' && ctx.options.prepare) {
-    emitAgentEnvelope({
-      ok: true,
-      mode: 'agent',
-      task: promptId,
-      promptId,
-      promptCommand: `tkt prompt show ${promptId}`,
-      json: true,
-      context,
-      instruction: loadAgentPrepareInstruction(),
-      next: 'tkt agent git-submit apply --plan-file <plan.json>',
-    })
-    return { ...ctx, commitPlan: undefined }
-  }
-
-  if (ctx.options.ai !== 'local') {
-    throw new GitSubmitError('agent 模式请用: tkt agent git-submit prepare | apply')
-  }
-
   const quiet = Boolean(ctx.options.json)
+
   // 居中「思考中」+ 机器人颜文字，等 AI 出 CommitPlan
   const plan = await withCatRun(
     'analyze',

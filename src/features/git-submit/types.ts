@@ -1,12 +1,8 @@
 /**
  * git-submit 类型与 CommitPlan schema。
- *
- * - local：CLI 调 Vercel AI SDK 生成 Plan
- * - agent：Skill prepare 出 envelope / apply 注入已校验 Plan
+ * 本地 CLI：Vercel AI SDK 生成 Plan → commit（可选 push）。
  */
 import { z } from 'zod'
-
-export type AiMode = 'local' | 'agent'
 
 export const CommitItemSchema = z.object({
   message: z.string().min(1),
@@ -22,15 +18,10 @@ export type CommitItem = z.infer<typeof CommitItemSchema>
 export type CommitPlan = z.infer<typeof CommitPlanSchema>
 
 export interface GitSubmitOptions {
-  ai: AiMode
   dryRun?: boolean
   noPull?: boolean
   /** true = 跳过 push；未指定时由 CLI 询问 */
   noPush?: boolean
-  /** 只输出 AgentEnvelope，不提交 */
-  prepare?: boolean
-  /** Skill apply：已 zod 校验的 Plan */
-  commitPlan?: CommitPlan
   json?: boolean
   cwd?: string
 }

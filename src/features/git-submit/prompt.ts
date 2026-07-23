@@ -3,14 +3,9 @@ import { loadPrompt } from '../prompts'
 import type { StyleSummary } from './types'
 
 export const COMMIT_PLAN_PROMPT_ID = 'git-submit.commit-plan' as const
-export const AGENT_PREPARE_PROMPT_ID = 'git-submit.agent-prepare' as const
 
 export function loadCommitPlanSystem(): string {
   return loadPrompt(COMMIT_PLAN_PROMPT_ID)
-}
-
-export function loadAgentPrepareInstruction(): string {
-  return loadPrompt(AGENT_PREPARE_PROMPT_ID)
 }
 
 /** Style Summary 仅输出指标与样本，策略文案在 commit-plan.md */

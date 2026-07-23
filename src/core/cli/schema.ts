@@ -1,22 +1,8 @@
 /**
- * CLI ↔ Skill 机器可读契约（zod）。
+ * CLI 机器可读契约（zod）。
  * 所有 JSON stdout 先过 schema，再打印。
  */
 import { z } from 'zod'
-
-export const AgentEnvelopeSchema = z.object({
-  ok: z.literal(true),
-  mode: z.literal('agent'),
-  task: z.string().min(1),
-  promptId: z.string().min(1),
-  promptCommand: z.string().min(1),
-  json: z.boolean(),
-  context: z.unknown().nullable(),
-  instruction: z.string().min(1),
-  next: z.string().optional(),
-})
-export type AgentEnvelope = z.infer<typeof AgentEnvelopeSchema>
-export type AgentEnvelopeInput = z.input<typeof AgentEnvelopeSchema>
 
 export const CliErrorSchema = z.object({
   ok: z.literal(false),
@@ -42,11 +28,6 @@ export const GitSubmitResultSchema = z.object({
   commits: z.array(z.object({ hash: z.string(), message: z.string() })),
   pushed: z.boolean(),
   gerrit: z.boolean().optional(),
-})
-
-export const AgentListSchema = z.object({
-  ok: z.literal(true),
-  agents: z.array(z.object({ name: z.string(), description: z.string() })),
 })
 
 /** 安全解析；失败时抛带路径的可读错误 */
