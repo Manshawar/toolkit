@@ -6,9 +6,9 @@
  */
 import chalk from 'chalk'
 import { createAiClient } from '../../ai'
-import { emitAgentEnvelope, parseWithSchema } from '../../lib/cli'
+import { emitAgentEnvelope, parseWithSchema } from '../../core/cli'
 import { loadTools } from '../../tools'
-import { withSpinner } from '../../ui'
+import { withCatRun } from '../../ui'
 import { GitSubmitError } from './errors'
 import {
   COMMIT_PLAN_PROMPT_ID,
@@ -65,10 +65,10 @@ export const stepAnalyze: Step = async (ctx) => {
   }
 
   const quiet = Boolean(ctx.options.json)
-  const plan = await withSpinner(
+  // 单独空行：小猫往前跑，等 AI 出 CommitPlan
+  const plan = await withCatRun(
     'analyze',
-    async (spin) => {
-      spin.update('analyze · model')
+    async () => {
       const ai = await createAiClient()
       const model = await ai.getModel()
       const tools = loadTools('git-submit.commit-plan', {
@@ -76,7 +76,6 @@ export const stepAnalyze: Step = async (ctx) => {
         diff: ctx.diff!,
         cwd: ctx.cwd,
       })
-      spin.update('analyze · CommitPlan')
       return ai.generateObject({
         schema: CommitPlanSchema,
         system: loadCommitPlanSystem(),
@@ -95,5 +94,8 @@ export const stepAnalyze: Step = async (ctx) => {
 
 function logPlan(plan: { commits: Array<{ message: string }> }): void {
   console.log(chalk.dim(`  plan: ${plan.commits.length} commit(s)`))
-  for (const c of plan.commits) console.log(chalk.cyan(`  • ${c.message}`))
+  // 与 git log 一致：最新在上（plan 数组末项最后提交 = 最新）
+  for (const c of [...plan.commits].reverse()) {
+    console.log(chalk.cyan(`  • ${c.message}`))
+  }
 }

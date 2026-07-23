@@ -10,7 +10,8 @@ export type AiMode = 'local' | 'agent'
 
 export const CommitItemSchema = z.object({
   message: z.string().min(1),
-  files: z.array(z.string()).default([]),
+  // 结构化输出勿用 .default/.optional（部分兼容网关 JSON Schema 不认）
+  files: z.array(z.string()),
 })
 
 export const CommitPlanSchema = z.object({

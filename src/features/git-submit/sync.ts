@@ -1,5 +1,5 @@
-/** 远程同步：pull（可跳过无 upstream）+ push（Gerrit → grp） */
-import { createGit, currentBranch, listRemotes, pushOrigin } from '../../lib/git'
+/** 远程同步：pull（可跳过无 upstream）+ push（Gerrit：grp + 普通 push） */
+import { createGit, currentBranch, listRemotes, pushOrigin } from '../../core/git'
 import { createSpinner, withSpinner } from '../../ui'
 import { runGrp } from '../grp'
 import { GitSubmitError } from './errors'
@@ -32,13 +32,14 @@ export const stepPush: Step = async (ctx) => {
   const remotes = await listRemotes(git)
   if (remotes.length === 0) throw new GitSubmitError('无 remote')
 
+  const branch = ctx.branch || (await currentBranch(git))
   const isGerrit = ctx.isGerrit ?? remotes.some((r) => r.isGerrit)
+
+  // Gerrit：先 refs/for/（评审），再普通 push（无合并权限时直接进分支）
   if (isGerrit) {
     await withSpinner('push (gerrit)', async () => runGrp(ctx.cwd), { quiet })
-    return { ...ctx, pushed: true, isGerrit: true }
   }
 
-  const branch = ctx.branch || (await currentBranch(git))
   await withSpinner(
     `push ${branch}`,
     async () => {
@@ -50,5 +51,5 @@ export const stepPush: Step = async (ctx) => {
     },
     { quiet },
   )
-  return { ...ctx, pushed: true }
+  return { ...ctx, pushed: true, isGerrit }
 }

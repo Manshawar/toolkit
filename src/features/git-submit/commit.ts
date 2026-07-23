@@ -1,6 +1,6 @@
 /** 按 CommitPlan 落库：单 commit 提交 diff 全部文件；多 commit 按 files 拆分 */
 import chalk from 'chalk'
-import { createGit } from '../../lib/git'
+import { createGit } from '../../core/git'
 import { createSpinner } from '../../ui'
 import { GitSubmitError } from './errors'
 import type { Step } from './types'
@@ -43,9 +43,27 @@ export const stepCommit: Step = async (ctx) => {
       const r = await git.commit(c.message)
       const hash = r.commit || (await git.revparse(['HEAD']))
       hashes.push(hash)
-      console.log(chalk.cyan(`  • ${c.message} (${hash.slice(0, 7)})`))
     }
+
+    // 与 git log 一致：最新在上
+    for (let i = commits.length - 1; i >= 0; i--) {
+      const hash = hashes[i] ?? ''
+      console.log(chalk.cyan(`  • ${commits[i].message} (${hash.slice(0, 7)})`))
+    }
+
     spin.succeed(`commit × ${hashes.length}`)
+
+    // 多 commit 后若还有残留，提示（常见于 AI files 漏列 / 过滤误伤）
+    const left = await git.status()
+    const leftover = [...left.files.map((f) => f.path), ...left.not_added].filter(
+      (p, i, arr) => arr.indexOf(p) === i,
+    )
+    if (leftover.length > 0 && !quiet) {
+      console.log(chalk.yellow(`  ⚠ 仍有 ${leftover.length} 个文件未纳入本次 plan，可再跑 tkt gc`))
+      for (const p of leftover.slice(0, 12)) console.log(chalk.dim(`    · ${p}`))
+      if (leftover.length > 12) console.log(chalk.dim(`    · … +${leftover.length - 12}`))
+    }
+
     return { ...ctx, commitHashes: hashes }
   } catch (e) {
     if (spin.status === 'running') {

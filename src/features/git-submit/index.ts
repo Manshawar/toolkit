@@ -12,7 +12,7 @@ import {
   emitCliError,
   emitJson,
   GitSubmitResultSchema,
-} from '../../lib/cli'
+} from '../../core/cli'
 import { printAutoPushStatus, resolveAutoPush } from './ask'
 import { GitSubmitError } from './errors'
 import { runWorkflow } from './run'
@@ -53,7 +53,11 @@ export async function runGitSubmit(options: GitSubmitOptions): Promise<void> {
       return
     }
     console.log(
-      chalk.green(`完成：${commits.length} 个 commit${pushed ? ' + push' : ''}`),
+      chalk.green(
+        `完成：${commits.length} 个 commit${
+          pushed ? (ctx.isGerrit ? ' + gerrit + push' : ' + push') : ''
+        }`,
+      ),
     )
   } catch (e) {
     if (e instanceof GitSubmitError && e.code === 'CLEAN') {

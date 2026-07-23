@@ -4,7 +4,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import chalk from 'chalk'
-import { createGit } from '../../lib/git'
+import { createGit } from '../../core/git'
 import { createSpinner } from '../../ui'
 import {
   MAX_PATCH,
@@ -15,7 +15,9 @@ import {
 import { GitSubmitError } from './errors'
 import type { DiffInfo, FileDiff, Step, StyleSummary } from './types'
 
-const JUNK_RE = /(\.log$|\.tmp$|(^|\/)(node_modules|dist|build|lib)\/|\.DS_Store$|package-lock\.json$|pnpm-lock\.yaml$|yarn\.lock$)/
+/** 忽略构建产物 / 依赖；根目录 lib/ 为 tsup 产物 */
+const JUNK_RE =
+  /(^|\/)(node_modules|dist|build)\/|(^|\/)\.DS_Store$|\.log$|\.tmp$|(^)lib\/|package-lock\.json$|pnpm-lock\.yaml$|yarn\.lock$/
 const CONVENTIONAL_RE =
   /^(feat|fix|refactor|style|docs|test|perf|build|ci|chore|revert)(\(.+\))?[!]?:\s+/i
 
