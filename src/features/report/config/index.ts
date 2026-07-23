@@ -7,7 +7,13 @@ export {
   writeSetting,
   loadSetting,
   applyRoster,
+  setShowRoster,
 } from './setting'
 export { ensurePrefs } from './prefs'
-export { fillMissingDisplayNames, remoteSlug } from './guess-name'
-export { promptRoster, type RosterResult, type RosterRow } from './roster'
+export {
+  fillMissingDisplayNames,
+  remoteSlug,
+  defaultDisplayName,
+  projectLabel,
+} from './guess-name'
+export { promptRoster, promptAppendOnly, type RosterResult, type RosterRow } from './roster'

@@ -50,7 +50,12 @@ function migrateLegacy(): void {
 
 /** 把名单勾选 / 日报名写回 */
 export function applyRoster(
-  rows: Array<{ path: string; display_name: string; enabled: boolean }>,
+  rows: Array<{
+    path: string
+    display_name: string
+    enabled: boolean
+    name_custom?: boolean
+  }>,
 ): RepoEntry[] {
   const setting = loadSetting()
   for (const row of rows) {
@@ -58,10 +63,19 @@ export function applyRoster(
     if (i < 0) continue
     setting.repositories[i]!.display_name = row.display_name.trim()
     setting.repositories[i]!.enabled = row.enabled
+    if (typeof row.name_custom === 'boolean') {
+      setting.repositories[i]!.name_custom = row.name_custom
+    }
     setting.repositories[i]!.last_used_at = isoNow()
   }
   writeSetting(setting)
   return setting.repositories
+}
+
+export function setShowRoster(on: boolean): void {
+  const setting = loadSetting()
+  setting.show_roster = on
+  writeSetting(setting)
 }
 
 export function loadSetting(): ReportSetting {
@@ -76,10 +90,10 @@ export function loadSetting(): ReportSetting {
   if (!s.day_start_max) s.day_start_max = DEFAULT_SETTING.day_start_max
   if (!s.day_end_min) s.day_end_min = DEFAULT_SETTING.day_end_min
   if (!s.role_definitions) s.role_definitions = DEFAULT_SETTING.role_definitions
+  if (typeof s.show_roster !== 'boolean') s.show_roster = true
   if (!Array.isArray(s.repositories)) s.repositories = []
   for (const r of s.repositories) {
     if (typeof r.enabled !== 'boolean') {
-      // 个人 GitHub 仓默认不采集（如 toolkit）；公司仓默认勾选
       r.enabled = !/github\.com/i.test(r.git_remote || '')
     }
     if (r.display_name == null) r.display_name = ''

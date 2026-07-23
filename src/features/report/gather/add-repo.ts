@@ -5,6 +5,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { isoNow, loadSetting, writeSetting } from '../config/setting'
+import { defaultDisplayName } from '../config/guess-name'
 import type { GatherRepo, RepoEntry } from '../types'
 import { collectSubjects, detectProject, isGitRepo, sessionHours, tryExec } from './git'
 
@@ -68,11 +69,14 @@ export function addAndGatherRepo(rawPath: string, opts: AddRepoOpts): AddRepoRes
     entry.enabled = true
     if (!entry.git_remote && remote) entry.git_remote = remote
     if (!entry.alias) entry.alias = alias
+    if (!entry.display_name.trim()) {
+      entry.display_name = defaultDisplayName({ git_remote: entry.git_remote || remote, alias })
+    }
   } else {
     entry = {
       path: abs,
       alias,
-      display_name: '',
+      display_name: defaultDisplayName({ git_remote: remote, alias }),
       git_remote: remote,
       enabled: true,
       added_at: now,

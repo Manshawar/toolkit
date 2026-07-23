@@ -6,7 +6,9 @@ import {
   ensurePrefs,
   fillMissingDisplayNames,
   loadSetting,
+  promptAppendOnly,
   promptRoster,
+  setShowRoster,
   writeSetting,
 } from './config'
 import {
@@ -27,12 +29,15 @@ function applyDisplayNames(pairs: Array<{ path: string; name: string }>): void {
   for (const { path: p, name } of pairs) {
     const abs = path.resolve(p)
     const n = name.trim()
-    if (!n) continue
+    // 只要中文名；拒绝 KaoQin-Attendance 这类英文
+    if (!n || !/[\u4e00-\u9fff]/.test(n)) continue
     const i = setting.repositories.findIndex((r) => r.path === abs)
-    if (i < 0 || setting.repositories[i]!.display_name) continue
-    setting.repositories[i]!.display_name = n
+    if (i < 0) continue
+    const cur = setting.repositories[i]!
+    if (cur.name_custom || /[\u4e00-\u9fff]/.test(cur.display_name || '')) continue
+    cur.display_name = n
     dirty = true
-    console.error(`✅ ${setting.repositories[i]!.alias} → ${n}`)
+    console.error(`✅ ${cur.alias} → ${n}`)
   }
   if (dirty) writeSetting(setting)
 }
@@ -50,7 +55,18 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
 
     const interactive = process.stdin.isTTY && !options.json
     if (interactive) {
-      const picked = await promptRoster(repos)
+      if (options.forceRoster) setShowRoster(true)
+      if (options.skipRoster) setShowRoster(false)
+
+      const showRoster = options.forceRoster
+        ? true
+        : options.skipRoster
+          ? false
+          : loadSetting().show_roster !== false
+
+      const picked = showRoster
+        ? await promptRoster(repos)
+        : await promptAppendOnly(repos)
       onlyPaths = picked.repos.filter((r) => r.enabled).map((r) => r.path)
       if (picked.append) append.push(picked.append)
     } else {

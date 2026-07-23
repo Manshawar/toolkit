@@ -15,12 +15,14 @@ export type RoleDef = {
 
 export type RepoEntry = {
   path: string
-  /** 目录名 / 短名（名单左侧） */
+  /** 本地目录名（参考） */
   alias: string
-  /** 日报用中文名（名单中间，可改；按 remote 猜一次后记住） */
+  /** 日报书写名（中文）；【】里用这个，禁止英文仓库名 */
   display_name: string
   git_remote: string
-  /** 勾选后才参与今日 gather；默认 true，可在启动名单里空格取消 */
+  /** 用户是否手动改过书写名；改过则不再自动覆盖 */
+  name_custom?: boolean
+  /** 勾选后才参与今日 gather */
   enabled: boolean
   added_at: string
   last_used_at: string
@@ -29,6 +31,8 @@ export type RepoEntry = {
 export type ReportSetting = {
   role: string
   auto_copy: boolean | null
+  /** true=启动进名单；false=跳过名单直接附带输入。名单里按 o 切换 */
+  show_roster: boolean
   git_user_email: string
   day_start_max: string
   day_end_min: string
@@ -39,6 +43,7 @@ export type ReportSetting = {
 export const DEFAULT_SETTING: ReportSetting = {
   role: '',
   auto_copy: null,
+  show_roster: true,
   git_user_email: '',
   day_start_max: '09:30',
   day_end_min: '20:30',
@@ -121,4 +126,8 @@ export type ReportOptions = {
   noClipboard?: boolean
   dryRun?: boolean
   json?: boolean
+  /** 强制打开名单（并写回 show_roster=true） */
+  forceRoster?: boolean
+  /** 强制跳过名单（并写回 show_roster=false） */
+  skipRoster?: boolean
 }

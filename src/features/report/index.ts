@@ -23,6 +23,8 @@ export function registerReportCommands(program: Command): void {
     .option('--no-clipboard', '不复制剪贴板')
     .option('--dry-run', '只生成不归档')
     .option('--json', '输出 JSON（含 plan）')
+    .option('--roster', '强制打开名单（并记住）')
+    .option('--no-roster', '跳过名单直达附带输入（并记住）')
     .action(async (opts) => {
       try {
         let date: string | undefined = opts.date
@@ -42,6 +44,8 @@ export function registerReportCommands(program: Command): void {
           noClipboard: Boolean(opts.noClipboard),
           dryRun: Boolean(opts.dryRun),
           json: Boolean(opts.json),
+          forceRoster: Boolean(opts.roster),
+          skipRoster: Boolean(opts.noRoster),
         })
       } catch (e) {
         console.error(e instanceof Error ? e.message : String(e))

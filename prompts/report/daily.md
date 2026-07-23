@@ -18,7 +18,7 @@
 2. 单条 hours ∈ [0.5, 4]，0.5 粒度。
 3. 改写 commit：去 feat:/fix: 前缀；动词开头；业务中文。
 4. text 不含【项目】与「- X小时」。
-5. project 优先用各仓已有 display_name / project；displayNames 仅当仍为空时补中文名（已有则空数组）。
+5. project 必须用各仓中文 display_name（如「车辆调度」「考勤」）；禁止用 KaoQin-Attendance / cldd-standard 等英文仓库名。displayNames 仅当仍无中文名时补汉字（已有则空数组）。
 6. sheetTime：单行 ≤80 字；无【】、无「小时」、无换行；用；连接。
 7. 缺口从 categories 主动型补；无 commit 时用【通用】或已知 project，勿编具体模块。
 8. Append 中的杂事/补充必须写入 items（可挂【通用】）；其中的本地路径先 `add_repo` 再写分点。
