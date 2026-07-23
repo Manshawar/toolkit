@@ -1,6 +1,6 @@
 /**
  * Prompt 目录：`prompts/<path>.md` ↔ task id。
- * Skill 与本地 submit 共用同一份文件。
+ * 本地 CLI（如 tkt gc）从这里加载 system / tool 元数据。
  */
 import * as fs from 'fs'
 import * as path from 'path'
@@ -11,7 +11,8 @@ import { emitCliError, emitJson, PromptListSchema, PromptShowSchema } from '../.
 export const PROMPT_CATALOG = {
   'git-submit.commit-plan': 'git-submit/commit-plan.md',
   'git-submit.deep-inspect-diff': 'git-submit/deep-inspect-diff.tool.json',
-  'git-submit.agent-prepare': 'git-submit/agent-prepare.md',
+  'report.daily': 'report/daily.md',
+  'bench.run': 'bench/run.md',
 } as const
 
 export type PromptId = keyof typeof PROMPT_CATALOG

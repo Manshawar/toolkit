@@ -4,15 +4,12 @@
  *
  * ```
  * src/
- *   ai/                 Vercel AI SDK（本地环）
- *   lib/                共享：env / git / cli 契约
- *   ui/                 CLI 等待动画
- *   tools/              AI tools（按场景加载）
- *   features/           功能区（一命令一目录）
- *     git-submit/       tkt gc + tkt agent
- *     prompts/          tkt prompt
- *     usage/            tkt usage
- *     grp/ / sv/
+ *   ai/                 Vercel AI SDK
+ *   core/               paths / env / git / cli
+ *   server/             Hono 单端口 UI
+ *   ui/                 CLI spinner
+ *   tools/              AI tools
+ *   features/           一命令一目录（git-submit / bench / …）
  * ```
  */
 import * as path from 'path'
@@ -23,9 +20,12 @@ import { runGrp } from './features/grp'
 import { runServe } from './features/sv'
 import { runUsage } from './features/usage'
 import { registerGitSubmitCommands } from './features/git-submit'
+import { registerBenchCommands } from './features/bench'
+import { registerReportCommands } from './features/report'
 import { runPromptList, runPromptShow } from './features/prompts'
 import { reconfigureAiConfig, showAiConfig } from './ai'
 import { interceptCliUpdate } from './core/update-check'
+import { startUiServer, DEFAULT_PORT } from './server'
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 loadDotenv({ path: path.join(packageRoot, '.env'), quiet: true })
@@ -81,6 +81,16 @@ async function main() {
     })
 
   registerGitSubmitCommands(program)
+  registerBenchCommands(program)
+  registerReportCommands(program)
+
+  program
+    .command('ui')
+    .description('本地 HTML 工具页（Hono 单端口）')
+    .option('--port <n>', '端口', String(DEFAULT_PORT))
+    .action((opts) => {
+      startUiServer({ port: parseInt(String(opts.port), 10) || DEFAULT_PORT })
+    })
 
   program.version(pkg.version, '-v, --vers')
   program.parse(process.argv)
