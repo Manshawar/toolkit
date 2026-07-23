@@ -1,0 +1,35 @@
+---
+description: toolkit 架构约定 — Hono 单端口、prompt 目录、代码干净
+alwaysApply: true
+---
+
+# toolkit 结构
+
+## CLI
+
+- 前缀 `tkt`；一能力一目录：`src/features/<name>/`
+- Agent 只调 CLI；不要再包一层 Skill 壳去转发同一套命令
+- 用户数据：`~/.config/tkt/<命令名>/`，分文件存，不写进仓库
+
+## Web（Hono）
+
+- **只开一个端口**（默认 `127.0.0.1:8787`，`tkt ui`）
+- 各工具用路由区分，不要另起进程/端口：
+  - 页面：`/<name>`（如 `/bench`）
+  - API：`/api/<name>/*`
+- Hono 做本机网关：**反向代理 / 挂载**各 feature 的页面与 API；业务逻辑留在 `features/`，`src/server/` 只负责组 app、listen
+- 新工具：在 feature 里 `mount(app)`，登记到 `src/server/index.ts` 的 mounts 列表
+- 不引入 Express / Vite 当本地工具 UI 壳
+
+## Prompt
+
+- **所有提示词**放 `prompts/`（按能力分子目录），经 `PROMPT_CATALOG` 注册
+- Agent：**CLI 路线** — `tkt prompt show <id>` 读流程，再只调 `tkt …`；不要再包 Skill 壳或 `node scripts/`
+- feature / 本地 AI 用 `loadPrompt(id)`；改文案只动 `prompts/`
+- prompt 写法：分工表 + 命令契约（入参→stdout→下一步）；**迁工具必须同时交 prompt**
+
+## 代码干净
+
+- 改动只碰相关文件；不顺手大重构、不堆无关注释/文档
+- feature 内：CLI / 路由 / 领域逻辑分文件；共享路径用 `src/core/paths.ts`
+- 依赖尽量薄；本地 UI 服务坚持 Hono + 随包 `assets/`

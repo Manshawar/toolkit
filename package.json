@@ -1,7 +1,7 @@
 {
   "name": "@manshawar/tkt",
   "version": "1.0.1",
-  "description": "Personal CLI: tkt gc / tkt agent / usage / grp / sv",
+  "description": "Personal CLI: tkt gc / tkt agent / bench / ui / usage / grp / sv",
   "commandName": "tkt",
   "bin": {
     "tkt": "lib/index.js"
@@ -13,7 +13,8 @@
   },
   "files": [
     "lib",
-    "prompts"
+    "prompts",
+    "assets"
   ],
   "type": "module",
   "keywords": [],
@@ -32,10 +33,13 @@
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.14",
     "@clack/prompts": "^1.7.0",
+    "@hono/node-server": "^2.0.11",
     "ai": "^7.0.35",
     "chalk": "^5.6.2",
+    "clipboardy": "^5.3.2",
     "commander": "^14.0.0",
     "dotenv": "^17.4.2",
+    "hono": "^4.12.31",
     "ora": "^9.4.1",
     "simple-git": "^3.28.0",
     "zod": "^4.4.3"
