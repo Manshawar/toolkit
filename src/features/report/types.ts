@@ -28,17 +28,43 @@ export type RepoEntry = {
   last_used_at: string
 }
 
+/** 周一→周日；与 Date.getDay() 映射见 hours.weekdayKey */
+export const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+export type WeekdayKey = (typeof WEEKDAY_KEYS)[number]
+
+export type DaySchedule = {
+  /** 是否工作日；周日默认 false */
+  enabled: boolean
+  start: string
+  end: string
+}
+
+export type WorkSchedule = Record<WeekdayKey, DaySchedule>
+
 export type ReportSetting = {
   role: string
   auto_copy: boolean | null
   /** true=启动进名单；false=跳过名单直接附带输入。名单里按 o 切换 */
   show_roster: boolean
   git_user_email: string
+  /** @deprecated 兼容旧配置；以 work_schedule 为准 */
   day_start_max: string
-  /** 下班时间下限（常用 21:00）；绝对不超过 22:00 */
+  /** @deprecated 兼容旧配置；以 work_schedule 为准 */
   day_end_min: string
+  /** 按星期的上下班窗 */
+  work_schedule: WorkSchedule
   repositories: RepoEntry[]
   role_definitions: Record<string, RoleDef>
+}
+
+export const DEFAULT_WORK_SCHEDULE: WorkSchedule = {
+  mon: { enabled: true, start: '09:00', end: '21:00' },
+  tue: { enabled: true, start: '09:00', end: '21:00' },
+  wed: { enabled: true, start: '09:00', end: '21:00' },
+  thu: { enabled: true, start: '09:00', end: '21:00' },
+  fri: { enabled: true, start: '09:00', end: '18:30' },
+  sat: { enabled: true, start: '09:00', end: '18:30' },
+  sun: { enabled: false, start: '09:00', end: '18:30' },
 }
 
 export const DEFAULT_SETTING: ReportSetting = {
@@ -48,6 +74,7 @@ export const DEFAULT_SETTING: ReportSetting = {
   git_user_email: '',
   day_start_max: '09:00',
   day_end_min: '21:00',
+  work_schedule: structuredClone(DEFAULT_WORK_SCHEDULE),
   repositories: [],
   role_definitions: {
     前端: {
