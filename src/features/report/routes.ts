@@ -3,7 +3,13 @@
  * 挂载 /api/report
  */
 import { Hono } from 'hono'
-import { ROLES, type ReportSetting, type RepoEntry } from './types'
+import {
+  ROLES,
+  WEEKDAY_KEYS,
+  type ReportSetting,
+  type RepoEntry,
+  type WorkSchedule,
+} from './types'
 import {
   applyRoster,
   loadSetting,
@@ -12,12 +18,16 @@ import {
   isoNow,
 } from './setting'
 import { listHistory, loadHistory, summarizeHistory } from './history'
-import { normalizeHm } from './hours'
+import { applyWorkSchedule, ensureWorkSchedule, normalizeHm } from './hours'
 import { generateReportUi, ensureRepoOnRoster } from './generate'
 import { halfHour, saveHistory, formatDaily } from './deliver'
 import type { ReportRecord } from './types'
 
 function settingView(s: ReportSetting) {
+  const work_schedule = ensureWorkSchedule(s.work_schedule, {
+    start: s.day_start_max,
+    end: s.day_end_min,
+  })
   return {
     path: settingPath(),
     roles: [...ROLES],
@@ -27,6 +37,7 @@ function settingView(s: ReportSetting) {
     git_user_email: s.git_user_email || '',
     day_start_max: s.day_start_max,
     day_end_min: s.day_end_min,
+    work_schedule,
     repositories: s.repositories.map((r) => ({
       path: r.path,
       alias: r.alias,
@@ -80,6 +91,7 @@ export function createReportApiRoutes(): Hono {
         show_roster?: boolean
         day_start_max?: string
         day_end_min?: string
+        work_schedule?: Partial<WorkSchedule>
         repositories?: Array<{
           path: string
           display_name?: string
@@ -99,11 +111,46 @@ export function createReportApiRoutes(): Hono {
       }
       if (typeof body.auto_copy === 'boolean') s.auto_copy = body.auto_copy
       if (typeof body.show_roster === 'boolean') s.show_roster = body.show_roster
-      if (typeof body.day_start_max === 'string') {
-        s.day_start_max = normalizeHm(body.day_start_max, s.day_start_max || '09:00')
-      }
-      if (typeof body.day_end_min === 'string') {
-        s.day_end_min = normalizeHm(body.day_end_min, s.day_end_min || '21:00')
+
+      if (body.work_schedule && typeof body.work_schedule === 'object') {
+        const merged = ensureWorkSchedule(s.work_schedule, {
+          start: s.day_start_max,
+          end: s.day_end_min,
+        })
+        for (const key of WEEKDAY_KEYS) {
+          const row = body.work_schedule[key]
+          if (!row || typeof row !== 'object') continue
+          if (typeof row.enabled === 'boolean') merged[key].enabled = row.enabled
+          if (typeof row.start === 'string') {
+            merged[key].start = normalizeHm(row.start, merged[key].start)
+          }
+          if (typeof row.end === 'string') {
+            merged[key].end = normalizeHm(row.end, merged[key].end)
+          }
+        }
+        applyWorkSchedule(s, merged)
+      } else {
+        // 兼容旧客户端：只改全局上下班 → 写到周一–周六
+        if (typeof body.day_start_max === 'string' || typeof body.day_end_min === 'string') {
+          const schedule = ensureWorkSchedule(s.work_schedule, {
+            start: s.day_start_max,
+            end: s.day_end_min,
+          })
+          const start =
+            typeof body.day_start_max === 'string'
+              ? normalizeHm(body.day_start_max, schedule.mon.start)
+              : null
+          const end =
+            typeof body.day_end_min === 'string'
+              ? normalizeHm(body.day_end_min, schedule.mon.end)
+              : null
+          for (const key of WEEKDAY_KEYS) {
+            if (key === 'sun') continue
+            if (start) schedule[key].start = start
+            if (end) schedule[key].end = end
+          }
+          applyWorkSchedule(s, schedule)
+        }
       }
 
       writeSetting(s)

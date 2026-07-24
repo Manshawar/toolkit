@@ -7,7 +7,7 @@ import * as p from '@clack/prompts'
 import chalk from 'chalk'
 import type { RepoEntry } from '../types'
 import { projectLabel } from '../ai'
-import { promptWorkWindow } from '../hours'
+import { promptWorkWindow, resolveWorkWindow } from '../hours'
 import { applyRoster, loadSetting, writeSetting } from '../setting'
 
 export type RosterRow = {
@@ -168,17 +168,19 @@ export async function promptRoster(repos: RepoEntry[]): Promise<RosterResult> {
  */
 export async function promptReportInteractive(
   repos: RepoEntry[],
-  opts: { focusKeys?: boolean } = {},
+  opts: { focusKeys?: boolean; date?: string } = {},
 ): Promise<RosterResult> {
   const setting = loadSetting()
   const rows = toRows(repos)
+  const date = opts.date || new Date().toISOString().slice(0, 10)
+  const win = resolveWorkWindow(setting, date)
 
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     return {
       repos: rows,
       append: '',
-      dayStart: setting.day_start_max,
-      dayEnd: setting.day_end_min,
+      dayStart: win.dayStart,
+      dayEnd: win.dayEnd,
       autoCopy: setting.auto_copy !== false,
     }
   }
@@ -191,8 +193,8 @@ export async function promptReportInteractive(
     ),
     focus: (opts.focusKeys ? 'keys' : 'append') as Focus,
     append: '',
-    dayStart: setting.day_start_max || '09:00',
-    dayEnd: setting.day_end_min || '21:00',
+    dayStart: win.dayStart,
+    dayEnd: win.dayEnd,
     autoCopy: setting.auto_copy !== false,
   }
   if (state.cursor < 0) state.cursor = 0
@@ -364,6 +366,7 @@ export async function promptReportInteractive(
     }
     if (goHours) {
       const win = await promptWorkWindow({
+        date,
         dayStart: state.dayStart,
         dayEnd: state.dayEnd,
       })

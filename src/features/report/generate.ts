@@ -15,7 +15,7 @@ import {
 } from './deliver'
 import { gatherToday } from './gather'
 import { isGitRepo, tryExec } from './gather/git'
-import { maxDayHours } from './hours'
+import { maxDayHours, resolveWorkWindow } from './hours'
 import { ensurePrefs } from './prefs'
 import { isoNow, loadSetting, writeSetting } from './setting'
 import type { ReportRecord, RepoEntry } from './types'
@@ -98,8 +98,7 @@ export async function generateReportUi(
   const date = input.date || new Date().toISOString().slice(0, 10)
   const onlyPaths = resolveOnlyPaths(input.paths)
   const setting = loadSetting()
-  const dayStart = setting.day_start_max || '09:00'
-  const dayEnd = setting.day_end_min || '21:00'
+  const { dayStart, dayEnd } = resolveWorkWindow(setting, date)
   const append = input.append?.trim() ? [input.append.trim()] : []
 
   let repos = setting.repositories.filter((r) =>

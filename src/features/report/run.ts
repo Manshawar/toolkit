@@ -11,7 +11,7 @@ import {
   normalizeSheetTime,
 } from './deliver'
 import { discoverRepos, gatherToday } from './gather'
-import { maxDayHours } from './hours'
+import { WEEKDAY_LABELS, maxDayHours, resolveWorkWindow } from './hours'
 import { ensurePrefs } from './prefs'
 import { promptReportInteractive } from './roster'
 import { loadSetting, writeSetting } from './setting'
@@ -57,6 +57,7 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
       // 默认进补充输入框；--roster 才先打开快捷键区。工时/剪贴板不主动弹。
       const picked = await promptReportInteractive(repos, {
         focusKeys: Boolean(options.forceRoster),
+        date,
       })
       onlyPaths = picked.repos.filter((r) => r.enabled).map((r) => r.path)
       if (picked.append) append.push(picked.append)
@@ -70,8 +71,14 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
 
   if (!dayStart || !dayEnd) {
     const s = loadSetting()
-    dayStart = dayStart || s.day_start_max
-    dayEnd = dayEnd || s.day_end_min
+    const win = resolveWorkWindow(s, date, { dayStart, dayEnd })
+    dayStart = dayStart || win.dayStart
+    dayEnd = dayEnd || win.dayEnd
+    if (!win.enabled) {
+      console.error(
+        chalk.dim(`今日（${WEEKDAY_LABELS[win.weekday]}）未勾选工作日，仍按 ${dayStart}→${dayEnd} 生成`),
+      )
+    }
   }
 
   const gather = prefs.useGit

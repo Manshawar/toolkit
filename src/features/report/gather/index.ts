@@ -3,6 +3,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { isoNow, loadSetting, writeSetting } from '../setting'
 import type { GatherRepo, GatherResult, ReportSetting, RepoEntry } from '../types'
+import { resolveWorkWindow } from '../hours'
 import { collectSubjects, detectProject, isGitRepo, daySessionHours, repoSpanHours, tryExec } from './git'
 
 export type GatherOpts = {
@@ -120,8 +121,12 @@ export function discoverRepos(opts: { userRepos?: string[] } = {}): RepoEntry[] 
 export function gatherToday(opts: GatherOpts): GatherResult {
   const setting = loadSetting()
   const date = opts.date
-  const dayStart = opts.dayStart || setting.day_start_max
-  const dayEnd = opts.dayEnd || setting.day_end_min
+  const win = resolveWorkWindow(setting, date, {
+    dayStart: opts.dayStart,
+    dayEnd: opts.dayEnd,
+  })
+  const dayStart = win.dayStart
+  const dayEnd = win.dayEnd
   const author = setting.git_user_email || tryExec('git config --get user.email')
 
   if (!setting.git_user_email && author) {

@@ -3,6 +3,7 @@ import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 import { dataDir, ensureDataDir } from '@/core/paths'
+import { ensureWorkSchedule } from '../hours/schedule'
 import { DEFAULT_SETTING, REPORT_ARG, type ReportSetting, type RepoEntry } from '../types'
 
 export function reportDir(): string {
@@ -83,15 +84,28 @@ export function loadSetting(): ReportSetting {
   ensureDataDir(REPORT_ARG)
   let s = readSetting()
   if (!s) {
-    s = { ...DEFAULT_SETTING, repositories: [] }
+    s = {
+      ...DEFAULT_SETTING,
+      work_schedule: structuredClone(DEFAULT_SETTING.work_schedule),
+      repositories: [],
+    }
     writeSetting(s)
     return s
   }
   if (!s.day_start_max) s.day_start_max = DEFAULT_SETTING.day_start_max
   if (!s.day_end_min) s.day_end_min = DEFAULT_SETTING.day_end_min
-  // 旧默认 20:30 容易把一天拉太长 → 迁到 21:00（封顶仍 22:00）
+  // 旧默认 20:30 / 09:30 → 归一
   if (s.day_end_min === '20:30') s.day_end_min = '21:00'
   if (s.day_start_max === '09:30') s.day_start_max = '09:00'
+  const hadSchedule = Boolean(s.work_schedule && typeof s.work_schedule === 'object')
+  s.work_schedule = ensureWorkSchedule(s.work_schedule, {
+    start: s.day_start_max,
+    end: s.day_end_min,
+  })
+  // 兼容字段跟周一对齐，便于旧调用读到合理值
+  s.day_start_max = s.work_schedule.mon.start
+  s.day_end_min = s.work_schedule.mon.end
+  if (!hadSchedule) writeSetting(s)
   if (!s.role_definitions) s.role_definitions = DEFAULT_SETTING.role_definitions
   if (typeof s.show_roster !== 'boolean') s.show_roster = true
   if (s.auto_copy == null) s.auto_copy = true
