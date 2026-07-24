@@ -1,6 +1,7 @@
 import { route } from 'preact-router'
 
-const ROUTES = [
+/** 功能型能力：首页卡片 + 头部「工具」菜单 */
+export const FEATURE_ROUTES = [
   {
     href: '/report',
     label: '日报',
@@ -11,8 +12,8 @@ const ROUTES = [
   {
     href: '/usage',
     label: '用量',
-    title: 'Token 用量',
-    desc: 'MiniMax Token Plan 剩余窗口与计数。',
+    title: '用量',
+    desc: 'Agent 各工具日/周/月/年消耗，以及 Token Plan 配额。',
     hint: 'Usage',
   },
   {
@@ -22,6 +23,10 @@ const ROUTES = [
     desc: '对比模型首包与总耗时，定时探测看稳定性。',
     hint: 'Bench',
   },
+] as const
+
+/** 通用配置：放在头部，不随功能膨胀 */
+export const CONFIG_ROUTES = [
   {
     href: '/setting',
     label: '设置',
@@ -31,7 +36,8 @@ const ROUTES = [
   },
 ] as const
 
-export { ROUTES }
+/** @deprecated 兼容旧 import；请用 FEATURE_ROUTES / CONFIG_ROUTES */
+export const ROUTES = [...FEATURE_ROUTES, ...CONFIG_ROUTES]
 
 export function HomePage(_props: { path?: string }) {
   return (
@@ -44,38 +50,67 @@ export function HomePage(_props: { path?: string }) {
           本机工具，少打扰
         </h1>
         <p class="mt-3 max-w-md text-[0.95rem] leading-relaxed text-muted">
-          日报台账、测网关、配模型，都在一个端口里。选一个能力开始。
+          日报、用量、测速都在工具里；AI 网关等通用配置在设置。
         </p>
       </section>
 
-      <section class="animate-rise-delay-1 grid gap-4 sm:grid-cols-2">
-        {ROUTES.map((item, i) => (
-          <a
-            key={item.href}
-            href={item.href}
-            onClick={(e) => {
-              e.preventDefault()
-              route(item.href)
-            }}
-            class={cnEntry(i)}
-          >
-            <div class="flex items-start justify-between gap-3">
-              <h2 class="font-display text-xl font-bold tracking-tight">
-                {item.title}
-              </h2>
-              <span
-                class="mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:translate-x-0.5"
-                aria-hidden
-              >
+      <section class="space-y-4">
+        <h2 class="text-xs font-medium uppercase tracking-[0.14em] text-primary/70">
+          工具
+        </h2>
+        <div class="animate-rise-delay-1 grid gap-4 sm:grid-cols-2">
+          {FEATURE_ROUTES.map((item, i) => (
+            <a
+              key={item.href}
+              href={item.href}
+              onClick={(e) => {
+                e.preventDefault()
+                route(item.href)
+              }}
+              class={cnEntry(i)}
+            >
+              <div class="flex items-start justify-between gap-3">
+                <h2 class="font-display text-xl font-bold tracking-tight">
+                  {item.title}
+                </h2>
+                <span
+                  class="mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:translate-x-0.5"
+                  aria-hidden
+                >
+                  →
+                </span>
+              </div>
+              <p class="mt-3 text-sm leading-relaxed text-muted">{item.desc}</p>
+              <p class="mt-6 text-xs font-medium uppercase tracking-[0.14em] text-primary/70">
+                {item.hint}
+              </p>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section class="space-y-3">
+        <h2 class="text-xs font-medium uppercase tracking-[0.14em] text-muted">
+          配置
+        </h2>
+        <div class="flex flex-wrap gap-2">
+          {CONFIG_ROUTES.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              onClick={(e) => {
+                e.preventDefault()
+                route(item.href)
+              }}
+              class="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-card/70 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/35 hover:bg-card"
+            >
+              {item.title}
+              <span class="text-muted" aria-hidden>
                 →
               </span>
-            </div>
-            <p class="mt-3 text-sm leading-relaxed text-muted">{item.desc}</p>
-            <p class="mt-6 text-xs font-medium uppercase tracking-[0.14em] text-primary/70">
-              {item.hint}
-            </p>
-          </a>
-        ))}
+            </a>
+          ))}
+        </div>
       </section>
     </div>
   )
