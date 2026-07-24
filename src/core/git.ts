@@ -25,6 +25,16 @@ export async function ensureRepo(git: SimpleGit): Promise<string> {
   return git.revparse(['--show-toplevel'])
 }
 
+/** 是否已有提交（无 HEAD = 空仓库 / 尚未 init commit） */
+export async function hasCommits(git?: SimpleGit): Promise<boolean> {
+  try {
+    await (git ?? createGit()).revparse(['HEAD'])
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function currentBranch(git?: SimpleGit): Promise<string> {
   const current = (await (git ?? createGit()).branch()).current
   if (!current) throw new Error('无法获取当前分支')

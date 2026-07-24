@@ -31,12 +31,14 @@ export interface FileDiff {
   status: 'added' | 'deleted' | 'modified' | 'renamed' | 'untracked'
   additions: number
   deletions: number
-  /** 主 prompt：已压缩+默认截断 */
+  /** 主 prompt：已压缩+默认截断；资源文件为空或仅占位 */
   patch?: string
   /** tool 分页用：压缩全文（受 MAX_STORE 上限） */
   fullCompressed?: string
   compressedLen?: number
   truncated?: boolean
+  /** 图片/字体等资源：仅文件名，不读内容 */
+  asset?: boolean
 }
 
 export interface DiffInfo {
@@ -65,6 +67,8 @@ export interface GitSubmitContext {
   branch: string
   options: GitSubmitOptions
   isGerrit?: boolean
+  /** 无 HEAD / 无提交历史 → 首提交走 init，跳过 AI */
+  noHistory?: boolean
   diff?: DiffInfo
   style?: StyleSummary
   commitPlan?: CommitPlan

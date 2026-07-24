@@ -5,6 +5,7 @@
 ## Diff 与 tool
 
 - 主 Diff 已空白压缩；单文件过长会截断，Files 列表标 `truncated chars=N`。
+- 标 `[asset]` 的是图片/字体/音视频等资源：**只看文件名**，禁止 deep_inspect，不要臆造内容。
 - tool `deep_inspect_diff`：仅当 truncated 或上下文不够时，用 offset/limit 分页继续读；够写 Plan 即停。
 - 能直接写 Plan 则不要调用 tool。
 

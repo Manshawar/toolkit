@@ -4,8 +4,8 @@
 import { tool, type ToolSet } from 'ai'
 import { z } from 'zod'
 import chalk from 'chalk'
-import { PAGE_SIZE, slicePage } from '../../features/git-submit/collect/compress'
-import { loadPromptJson } from '../../features/prompts'
+import { PAGE_SIZE, slicePage } from '@/features/git-submit/collect/compress'
+import { loadPromptJson } from '@/features/prompts'
 import type { ToolLoadContext } from '../types'
 
 interface ToolMeta {
@@ -48,6 +48,18 @@ export function createDeepInspectDiffTool(ctx: ToolLoadContext): ToolSet {
             ok: false as const,
             error: `not in diff: ${path}`,
             available: diff.files.map((f) => f.path),
+          }
+        }
+
+        if (file.asset) {
+          return {
+            ok: true as const,
+            path,
+            status: file.status,
+            note: 'asset · name only (no content)',
+            additions: file.additions,
+            deletions: file.deletions,
+            done: true,
           }
         }
 

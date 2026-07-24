@@ -1,5 +1,5 @@
 /** 编排：pull → conflict → diff → history → analyze → commit → push */
-import { createGit, currentBranch, ensureRepo, listRemotes } from '../../core/git'
+import { createGit, currentBranch, ensureRepo, hasCommits, listRemotes } from '@/core/git'
 import { stepAnalyze } from './ai'
 import { stepConflict, stepDiff, stepHistory } from './collect'
 import { GitSubmitError } from './errors'
@@ -12,12 +12,14 @@ export async function createContext(options: GitSubmitOptions): Promise<GitSubmi
   const repo = await ensureRepo(git)
   const branch = await currentBranch(git)
   const remotes = await listRemotes(git)
+  const noHistory = !(await hasCommits(git))
   return {
     cwd: repo,
     repo,
     branch,
     options,
     isGerrit: remotes.some((r) => r.isGerrit),
+    noHistory,
   }
 }
 

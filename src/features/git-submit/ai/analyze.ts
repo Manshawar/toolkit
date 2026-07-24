@@ -1,5 +1,6 @@
 /**
  * 本地 AI SDK 生成 CommitPlan；大 diff 默认截断，必要时 deep_inspect_diff 分页吞吐。
+ * 无提交历史：固定 `init: 初始化`，不调 AI。
  */
 import chalk from 'chalk'
 import { createAiClient } from '@/ai'
@@ -7,10 +8,22 @@ import { loadTools } from '@/tools'
 import { withCatRun } from '@/ui'
 import { GitSubmitError } from '../errors'
 import { buildCommitPlanUser, loadCommitPlanSystem } from './prompt'
-import { CommitPlanSchema, type Step } from '../types'
+import { CommitPlanSchema, type CommitPlan, type Step } from '../types'
+
+const INIT_PLAN: CommitPlan = {
+  commits: [{ message: 'init: 初始化', files: [] }],
+}
 
 export const stepAnalyze: Step = async (ctx) => {
   if (!ctx.diff || !ctx.style) throw new GitSubmitError('缺少 diff 或 style')
+
+  // 空仓库首提交：不耗 token
+  if (ctx.noHistory) {
+    console.log(chalk.dim('→ analyze skipped (init)'))
+    logPlan(INIT_PLAN)
+    if (ctx.options.dryRun) console.log(chalk.yellow('[dry-run] 跳过 commit / push'))
+    return { ...ctx, commitPlan: INIT_PLAN }
+  }
 
   const user = buildCommitPlanUser(ctx.style, ctx.diff.summary)
   const quiet = Boolean(ctx.options.json)
