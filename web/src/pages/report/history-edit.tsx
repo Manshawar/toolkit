@@ -9,6 +9,24 @@ import { ReportLayout } from '@web/pages/report/layout'
 import { PieChart } from '@web/pages/report/pie'
 import type { ReportItem, ReportRecord } from '@web/pages/report/types'
 
+/** 与后端 deliver.formatDaily 对齐，供粘贴用工时表 */
+function halfHour(n: number): number {
+  return Math.min(4, Math.max(0.5, Math.round(n * 2) / 2))
+}
+
+function formatDaily(items: ReportItem[]): string {
+  return items
+    .map((it, i) => {
+      const h = halfHour(Number(it.hours) || 0.5)
+      const hs = Number.isInteger(h) ? String(h) : h.toFixed(1)
+      const text = String(it.text || '')
+        .trim()
+        .replace(/[。.]+$/, '')
+      return `${i + 1}. 【${String(it.project || '').trim()}】${text}。- ${hs}小时`
+    })
+    .join('\n')
+}
+
 export function ReportHistoryEditPage() {
   const { date: dateParam = '' } = useParams<{ date: string }>()
   const date = dateParam
@@ -19,6 +37,7 @@ export function ReportHistoryEditPage() {
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [copyMsg, setCopyMsg] = useState('')
 
   const pieSlices = useMemo(() => {
     const map = new Map<string, number>()
@@ -34,6 +53,8 @@ export function ReportHistoryEditPage() {
     [items],
   )
 
+  const dailyText = useMemo(() => formatDaily(items), [items])
+
   async function load() {
     if (!date) return
     try {
@@ -43,6 +64,7 @@ export function ReportHistoryEditPage() {
       setItems(data.items.map((it) => ({ ...it })))
       setOk(true)
       setMsg('')
+      setCopyMsg('')
     } catch (e) {
       setOk(false)
       setMsg(e instanceof Error ? e.message : String(e))
@@ -69,6 +91,19 @@ export function ReportHistoryEditPage() {
       setMsg(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function copyDaily() {
+    if (!dailyText.trim()) {
+      setCopyMsg('暂无可复制内容')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(dailyText)
+      setCopyMsg('已复制到剪贴板')
+    } catch (e) {
+      setCopyMsg(e instanceof Error ? e.message : '复制失败')
     }
   }
 
@@ -175,16 +210,37 @@ export function ReportHistoryEditPage() {
           ) : null}
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>当日任务分布</CardTitle>
-          </CardHeader>
-          {!pieSlices.length ? (
-            <p className="text-sm text-muted">无条目</p>
-          ) : (
-            <PieChart slices={pieSlices} size={160} />
-          )}
-        </Card>
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>剪切板</CardTitle>
+              <Button size="sm" variant="secondary" onClick={() => void copyDaily()}>
+                复制
+              </Button>
+            </CardHeader>
+            {copyMsg ? (
+              <p className="mb-2 text-xs text-muted">{copyMsg}</p>
+            ) : (
+              <p className="mb-2 text-xs text-muted">
+                粘贴用工时表格式，随左侧编辑实时更新（不含 sheetTime）
+              </p>
+            )}
+            <pre className="max-h-[280px] overflow-auto whitespace-pre-wrap break-words rounded-xl border border-border/70 bg-surface/40 px-3 py-2.5 font-mono text-[13px] leading-relaxed text-foreground">
+              {dailyText.trim() ? dailyText : '暂无条目'}
+            </pre>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>当日任务分布</CardTitle>
+            </CardHeader>
+            {!pieSlices.length ? (
+              <p className="text-sm text-muted">无条目</p>
+            ) : (
+              <PieChart slices={pieSlices} size={160} />
+            )}
+          </Card>
+        </div>
       </div>
     </ReportLayout>
   )
