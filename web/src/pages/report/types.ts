@@ -8,6 +8,27 @@ export type RepoRow = {
   last_used_at?: string
 }
 
+export const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+export type WeekdayKey = (typeof WEEKDAY_KEYS)[number]
+
+export const WEEKDAY_LABELS: Record<WeekdayKey, string> = {
+  mon: '周一',
+  tue: '周二',
+  wed: '周三',
+  thu: '周四',
+  fri: '周五',
+  sat: '周六',
+  sun: '周日',
+}
+
+export type DayScheduleView = {
+  enabled: boolean
+  start: string
+  end: string
+}
+
+export type WorkScheduleView = Record<WeekdayKey, DayScheduleView>
+
 export type ReportSettingView = {
   path: string
   roles: string[]
@@ -15,8 +36,11 @@ export type ReportSettingView = {
   auto_copy: boolean
   show_roster: boolean
   git_user_email: string
+  /** @deprecated 兼容；以 work_schedule 为准 */
   day_start_max: string
+  /** @deprecated 兼容；以 work_schedule 为准 */
   day_end_min: string
+  work_schedule: WorkScheduleView
   repositories: RepoRow[]
 }
 
