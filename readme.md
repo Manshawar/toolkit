@@ -46,6 +46,7 @@ tkt config --show       # 查看当前配置（Key 脱敏）
 | 数据 | 路径 |
 | --- | --- |
 | 全局 AI | `~/.config/tkt/ai/.env` |
+| 更新检查间隔 | `~/.config/tkt/update/prefs.json`（默认 3 小时） |
 | 日报偏好 / 名单 | `~/.config/tkt/report/setting.json` |
 | 日报归档 | `~/.config/tkt/report/history/YYYY-MM-DD.json` |
 | Bench 网关 | `~/.config/tkt/bench/gateway.json` |
@@ -84,7 +85,7 @@ tkt report --no-clipboard                    # 不复制到剪贴板
 tkt report --json                            # JSON 输出
 ```
 
-也可用 UI：`tkt ui` → `/report/generate`（只扫名单已有仓库或手输路径，不扫 cwd）。
+也可用 UI：`tkt report ui` → `/report`（生成页在 `/report/generate`）。
 
 ### `tkt bench` — 网关测速
 
@@ -96,36 +97,40 @@ tkt bench --models gpt-4,claude --rounds 3  # 指定模型，测 3 轮取均值
 tkt bench --sort ttft                       # 按首 token 时间排序
 tkt bench -c 4                              # 最大并发 4
 tkt bench --json                            # JSON 输出
-tkt bench ui                                # 同 tkt ui（打开工具台）
+tkt bench ui                                # → /bench
 ```
 
 ### `tkt ui` — 本地工具台（SPA）
 
-单端口 Hono 托管 `assets/ui`（Preact + Tailwind）。前端源码在 `web/`，构建产物进 `assets/ui/`。
+单端口 Hono 托管 `assets/ui`。默认端口 **38471**（偏门，降低冲突）；占用时自动顺延。有 UI 的命令统一用 **`tkt <cmd> ui`**：
 
 ```bash
-tkt ui                # → http://127.0.0.1:8787/
-tkt ui --port 3000    # 指定端口
+tkt ui                   # → / 导航页（:38471）
+tkt report ui            # → /report
+tkt usage ui             # → /usage
+tkt bench ui             # → /bench
+tkt config ui            # → /setting
+tkt ui --path /report/generate
+tkt report ui --no-open  # 只起服务不弹浏览器
+tkt ui --port 3000       # 强制指定端口
 ```
 
-| 路由 | 说明 |
+| 命令 | 路由 |
 | --- | --- |
-| `/` | 导航首页 |
-| `/report` | 日报总览（统计、任务分布饼图） |
-| `/report/generate` | 生成今日日报 |
-| `/report/history` | 归档列表 |
-| `/report/history/:date` | 查改某日归档 |
-| `/report/roster` | 仓库名单 |
-| `/report/prefs` | 日报偏好 |
-| `/bench` | 网关测速 |
-| `/setting` | 全局 AI 配置 |
+| `tkt ui` | `/` |
+| `tkt report ui` | `/report` |
+| `tkt usage ui` | `/usage` |
+| `tkt bench ui` | `/bench` |
+| `tkt config ui` | `/setting` |
 
-API 前缀：`/api/report/*`、`/api/bench/*`、`/api/setting/*`。
+子页（浏览器内）：`/report/generate`、`/report/history`、`/report/roster`、`/report/prefs` 等。
+
+API 前缀：`/api/report/*`、`/api/usage/*`、`/api/bench/*`、`/api/setting/*`。
 
 ### 开发与打包
 
 ```bash
-pnpm ui:dev          # Vite :5173 + Hono :8787（/api 代理），本地联调
+pnpm ui:dev          # Vite :5173 + Hono :38471（/api 代理），本地联调
 pnpm ui:serve        # 仅 API（tsx watch）
 pnpm web:dev         # 仅 Vite
 pnpm web:build       # → assets/ui/
@@ -142,7 +147,10 @@ tkt usage                 # 实时刷新（60s）
 tkt usage --once          # 查一次
 tkt usage -i 30           # 30 秒刷新
 tkt usage -p minimax      # 指定 provider
+tkt usage ui              # → /usage
 ```
+
+需配置 `MINIMAX_API_KEY`（可选 `MINIMAX_API_BASE`）。
 
 ### 其他
 
