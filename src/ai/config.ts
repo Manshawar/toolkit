@@ -8,7 +8,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { config as loadDotenv } from 'dotenv'
 import * as p from '@clack/prompts'
-import { ensureDataDir, packageRoot } from '../core/paths'
+import { ensureDataDir, packageRoot } from '@/core/paths'
 
 export interface AiConfig {
   baseUrl: string
@@ -210,7 +210,7 @@ async function promptMissing(partial: Partial<AiConfig>): Promise<AiConfig> {
   const miss = missingKeys(partial)
   return promptAiFields(partial, {
     keepExisting: false,
-    title: `缺少 AI 配置，请填写（${miss.join(', ')}）`,
+    title: `缺少 AI 配置（${miss.join(', ')}），请先填写；完成后将继续`,
   })
 }
 

@@ -2,7 +2,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { execSync } from 'child_process'
-import { hoursBetween, normalizeHm } from '../config/work-hours'
+import { hoursBetween, normalizeHm } from '../hours'
 
 export function tryExec(cmd: string): string {
   try {

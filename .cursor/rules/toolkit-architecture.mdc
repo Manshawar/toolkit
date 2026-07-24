@@ -21,21 +21,24 @@ features/<name>/
   run.ts            # 编排流水线
   types.ts          # 共享类型 / schema
   errors.ts         # （可选）领域错误
-  <stage>/          # 按职责：config|prefs|gather|collect|ai|git|deliver…
+  <stage>/          # 按职责拆分；每个目录一件事
 ```
 
 参考：
 
-- `report/`：`config/` → `gather/` → `ai/` → `deliver/`
+- `report/`：`prefs/` → `setting/` → `roster/` → `hours/` → `gather/` → `ai/` → `deliver/`
+  - `prefs` 角色/剪贴板偏好；`setting` 持久化；`roster` 交互名单；`hours` 工时窗
+  - `ai` 含猜名 + 写日报（`guess-name.ts` / `plan.ts`）；勿把推理塞进 config 杂物抽屉
 - `git-submit/`：`prefs/` → `collect/` → `ai/` → `git/`
 
 约定：
 
 - **禁止**在 feature 根堆一堆平级 `.ts`（难维护）
+- **禁止**用泛名目录（如 `config/`）塞多种无关职责；阶段名要对齐真实工作
 - 新能力照现有 feature 拆阶段；简单工具（一两文件）可不拆
 - 阶段目录用 `index.ts` 对外导出；编排只从阶段目录 import
 - 共享路径用 `src/core/paths.ts`，不要各写一套找 package root
-
+- AI 调用：`createAiClient()` 必须在 `withCatRun` 外；缺配置先填，再显示「思考中」
 ## Web（Hono）
 
 - **只开一个端口**（默认 `127.0.0.1:8787`，`tkt ui`）

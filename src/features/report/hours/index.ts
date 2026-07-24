@@ -4,7 +4,7 @@
  */
 import * as p from '@clack/prompts'
 import chalk from 'chalk'
-import { loadSetting, writeSetting } from './setting'
+import { loadSetting, writeSetting } from '../setting'
 
 /** 仅作默认建议，不限制用户调整 */
 export const DAY_FLOOR = '09:00'

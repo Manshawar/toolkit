@@ -2,9 +2,9 @@
  * 本地 AI SDK 生成 CommitPlan；大 diff 默认截断，必要时 deep_inspect_diff 分页吞吐。
  */
 import chalk from 'chalk'
-import { createAiClient } from '../../../ai'
-import { loadTools } from '../../../tools'
-import { withCatRun } from '../../../ui'
+import { createAiClient } from '@/ai'
+import { loadTools } from '@/tools'
+import { withCatRun } from '@/ui'
 import { GitSubmitError } from '../errors'
 import { buildCommitPlanUser, loadCommitPlanSystem } from './prompt'
 import { CommitPlanSchema, type Step } from '../types'
@@ -15,11 +15,11 @@ export const stepAnalyze: Step = async (ctx) => {
   const user = buildCommitPlanUser(ctx.style, ctx.diff.summary)
   const quiet = Boolean(ctx.options.json)
 
-  // 居中「思考中」+ 机器人颜文字，等 AI 出 CommitPlan
+  // 配置拦截在「思考中」之前；client 在动画外创建
+  const ai = await createAiClient()
   const plan = await withCatRun(
     'analyze',
     async () => {
-      const ai = await createAiClient()
       const model = await ai.getModel()
       const tools = loadTools('git-submit.commit-plan', {
         model,

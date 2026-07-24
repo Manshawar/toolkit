@@ -1,15 +1,7 @@
-/** 本地编排：prefs → 名单勾选 → gather → AI → deliver */
+/** 本地编排：prefs → roster → gather → ai → deliver */
 import chalk from 'chalk'
 import * as path from 'path'
-import { generateDailyPlan } from './ai'
-import {
-  ensurePrefs,
-  fillMissingDisplayNames,
-  loadSetting,
-  maxDayHours,
-  promptReportInteractive,
-  writeSetting,
-} from './config'
+import { fillMissingDisplayNames, generateDailyPlan } from './ai'
 import {
   assertPlan,
   buildRecord,
@@ -19,6 +11,10 @@ import {
   normalizeSheetTime,
 } from './deliver'
 import { discoverRepos, gatherToday } from './gather'
+import { maxDayHours } from './hours'
+import { ensurePrefs } from './prefs'
+import { promptReportInteractive } from './roster'
+import { loadSetting, writeSetting } from './setting'
 import type { ReportOptions } from './types'
 
 function applyDisplayNames(pairs: Array<{ path: string; name: string }>): void {
@@ -53,6 +49,7 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
 
   if (prefs.useGit) {
     let repos = discoverRepos({ userRepos: options.userRepos })
+    // 本地词典先猜；真打 AI 时 createAiClient 才拦截配置
     repos = await fillMissingDisplayNames(repos, { quiet: Boolean(options.json) })
 
     const interactive = process.stdin.isTTY && !options.json

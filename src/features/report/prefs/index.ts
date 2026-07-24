@@ -1,7 +1,7 @@
 /** 首次交互：角色 + 剪贴板偏好 */
 import * as p from '@clack/prompts'
 import { ROLES, type Role } from '../types'
-import { loadSetting, writeSetting } from './setting'
+import { loadSetting, writeSetting } from '../setting'
 
 function abort(v: unknown): asserts v is string | boolean {
   if (p.isCancel(v)) {

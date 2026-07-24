@@ -1,7 +1,7 @@
 /** 发现候选仓库 + 仅采集 enabled */
 import * as fs from 'fs'
 import * as path from 'path'
-import { isoNow, loadSetting, writeSetting } from '../config/setting'
+import { isoNow, loadSetting, writeSetting } from '../setting'
 import type { GatherRepo, GatherResult, ReportSetting, RepoEntry } from '../types'
 import { collectSubjects, detectProject, isGitRepo, daySessionHours, repoSpanHours, tryExec } from './git'
 

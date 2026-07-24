@@ -2,7 +2,7 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import clipboard from 'clipboardy'
-import { historyDir, isoNow } from '../config'
+import { historyDir, isoNow } from '../setting'
 import type { DailyPlan, ReportRecord } from '../types'
 
 function copyToClipboard(text: string): { ok: boolean; detail?: string } {

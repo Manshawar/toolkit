@@ -4,10 +4,10 @@
  * name_custom 手动改过的不再覆盖。
  */
 import { z } from 'zod'
-import { createAiClient } from '../../../ai'
-import { withCatRun } from '../../../ui'
+import { createAiClient } from '@/ai'
+import { withCatRun } from '@/ui'
+import { applyRoster } from '../setting'
 import type { RepoEntry } from '../types'
-import { applyRoster } from './setting'
 
 /** https://host/a/b/cldd-standard.git → cldd-standard */
 export function remoteSlug(remote: string): string {
@@ -101,11 +101,12 @@ export async function fillMissingDisplayNames(
       slug: remoteSlug(r.git_remote) || r.alias,
     }))
     try {
+      // createAiClient 在动画外：缺配置先填，再「思考中」
+      const ai = await createAiClient()
       const guessed = await withCatRun(
         'guess-name',
-        async () => {
-          const ai = await createAiClient()
-          return ai.generateObject({
+        async () =>
+          ai.generateObject({
             schema: GuessSchema,
             name: 'RepoDisplayNames',
             description: 'Chinese short names for daily report projects',
@@ -117,8 +118,7 @@ export async function fillMissingDisplayNames(
               '不要加「项目」后缀。只输出 JSON。',
             ].join('\n'),
             user: JSON.stringify(payload, null, 2),
-          })
-        },
+          }),
         { quiet: Boolean(opts.quiet) },
       )
       for (const n of guessed.names) {

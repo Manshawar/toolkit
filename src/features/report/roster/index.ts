@@ -6,9 +6,9 @@
 import * as p from '@clack/prompts'
 import chalk from 'chalk'
 import type { RepoEntry } from '../types'
-import { projectLabel } from './guess-name'
-import { applyRoster, loadSetting, writeSetting } from './setting'
-import { promptWorkWindow } from './work-hours'
+import { projectLabel } from '@/ai'
+import { promptWorkWindow } from '../hours'
+import { applyRoster, loadSetting, writeSetting } from '../setting'
 
 export type RosterRow = {
   path: string

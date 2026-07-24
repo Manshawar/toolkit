@@ -2,7 +2,7 @@
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
-import { dataDir, ensureDataDir } from '../../../core/paths'
+import { dataDir, ensureDataDir } from '@/core/paths'
 import { DEFAULT_SETTING, REPORT_ARG, type ReportSetting, type RepoEntry } from '../types'
 
 export function reportDir(): string {

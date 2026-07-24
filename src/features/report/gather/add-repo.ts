@@ -4,8 +4,8 @@
  */
 import * as fs from 'fs'
 import * as path from 'path'
-import { isoNow, loadSetting, writeSetting } from '../config/setting'
-import { defaultDisplayName } from '../config/guess-name'
+import { defaultDisplayName } from '@/ai'
+import { isoNow, loadSetting, writeSetting } from '../setting'
 import type { GatherRepo, RepoEntry } from '../types'
 import { collectSubjects, detectProject, isGitRepo, repoSpanHours, tryExec } from './git'
 
