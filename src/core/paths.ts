@@ -9,7 +9,11 @@ import { fileURLToPath } from 'url'
 
 export function packageRoot(): string {
   const dir = path.dirname(fileURLToPath(import.meta.url))
-  for (const root of [path.resolve(dir, '..'), path.resolve(dir, '../..')]) {
+  for (const root of [
+    path.resolve(dir, '..'),
+    path.resolve(dir, '../..'),
+    path.resolve(dir, '../../..'),
+  ]) {
     if (fs.existsSync(path.join(root, 'package.json'))) return root
   }
   return path.resolve(dir, '..')

@@ -19,7 +19,13 @@ import {
   type ToolSet,
 } from 'ai'
 import type { z } from 'zod'
-import { interceptAiConfig, type AiConfig } from './config'
+import {
+  interceptAiConfig,
+  isAiConfigError,
+  recoverAiConfig,
+  resetAiConfigCache,
+  type AiConfig,
+} from './config'
 
 export type { AiConfig } from './config'
 export {
@@ -29,6 +35,8 @@ export {
   showAiConfig,
   aiEnvPath,
   resetAiConfigCache,
+  isAiConfigError,
+  recoverAiConfig,
 } from './config'
 
 export interface GenerateObjectOptions<SCHEMA extends z.ZodType> {
@@ -111,7 +119,8 @@ export function supportsStructuredOutputs(model: string): boolean {
 }
 
 export async function createAiClient(config?: AiConfig): Promise<AiClient> {
-  async function resolve() {
+  async function resolve(forcePrompt = false) {
+    if (forcePrompt) resetAiConfigCache()
     const cfg = config ?? (await interceptAiConfig())
     const baseURL = normalizeOpenAiBaseUrl(cfg.baseUrl)
     const provider = createOpenAICompatible({
@@ -137,11 +146,10 @@ export async function createAiClient(config?: AiConfig): Promise<AiClient> {
       opts: GenerateObjectOptions<SCHEMA>,
     ): Promise<z.infer<SCHEMA>> {
       const { schema, system, user, tools, maxSteps, name, description } = opts
-      const { model } = await resolve()
       // structured output 本身占 1 step；留足 tool 轮次
       const steps = maxSteps ?? (tools && Object.keys(tools).length > 0 ? 8 : 1)
 
-      const run = async () => {
+      const run = async (model: LanguageModel) => {
         try {
           const { output } = await generateText({
             model,
@@ -170,19 +178,33 @@ export async function createAiClient(config?: AiConfig): Promise<AiClient> {
         }
       }
 
-      try {
-        return await run()
-      } catch (e) {
-        if (!NoObjectGeneratedError.isInstance(e)) throw e
-        // 整轮再试一次（网关偶发烂 JSON）
+      const attempt = async (forcePrompt = false) => {
+        const { model } = await resolve(forcePrompt)
         try {
-          return await run()
-        } catch (e2) {
-          if (NoObjectGeneratedError.isInstance(e2)) {
-            throw new Error(formatNoObjectError(e2))
+          return await run(model)
+        } catch (e) {
+          if (!NoObjectGeneratedError.isInstance(e)) throw e
+          // 整轮再试一次（网关偶发烂 JSON）
+          try {
+            return await run(model)
+          } catch (e2) {
+            if (NoObjectGeneratedError.isInstance(e2)) {
+              throw new Error(formatNoObjectError(e2))
+            }
+            throw e2
           }
-          throw e2
         }
+      }
+
+      try {
+        return await attempt(false)
+      } catch (e) {
+        // 缺 key / 鉴权失败：跳去填写再试一次（外部传入 config 时不抢）
+        if (!config && isAiConfigError(e)) {
+          await recoverAiConfig(e)
+          return attempt(true)
+        }
+        throw e
       }
     },
   }

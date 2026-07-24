@@ -1,13 +1,14 @@
 /**
  * AI 配置拦截器 + 重配命令。
- * - 调用前缺 URL/Key/Model → 挂起填写
- * - `tkt config` → 重新填写；有值覆盖，空回车保留原值
+ * - 缺 URL/Key/Model → 交互填写（不甩「环境变量」错误）
+ * - 配置落盘：~/.config/tkt/ai/.env（全局安装也可用）；兼容读包内 .env
+ * - `tkt config` → 重新填写
  */
 import * as fs from 'fs'
 import * as path from 'path'
-import { fileURLToPath } from 'url'
 import { config as loadDotenv } from 'dotenv'
 import * as p from '@clack/prompts'
+import { ensureDataDir, packageRoot } from '../core/paths'
 
 export interface AiConfig {
   baseUrl: string
@@ -21,15 +22,13 @@ let cached: AiConfig | null = null
 /** 并发调用共用一次交互，避免重复提问 */
 let inflight: Promise<AiConfig> | null = null
 
-function packageRoot(): string {
-  const dir = path.dirname(fileURLToPath(import.meta.url))
-  for (const root of [path.resolve(dir, '..'), path.resolve(dir, '../..')]) {
-    if (fs.existsSync(path.join(root, 'package.json'))) return root
-  }
-  return path.resolve(dir, '..')
+/** 用户级配置（优先）：~/.config/tkt/ai/.env */
+export function aiEnvPath(): string {
+  return path.join(ensureDataDir('ai'), '.env')
 }
 
-export function aiEnvPath(): string {
+/** 包内 .env（兼容旧路径） */
+function packageEnvPath(): string {
   return path.join(packageRoot(), '.env')
 }
 
@@ -39,6 +38,11 @@ function quoteEnv(v: string): string {
 }
 
 function reloadEnv(): void {
+  // 先包内，再用户级覆盖
+  const pkg = packageEnvPath()
+  if (fs.existsSync(pkg)) {
+    loadDotenv({ path: pkg, quiet: true, override: false })
+  }
   loadDotenv({ path: aiEnvPath(), quiet: true, override: true })
 }
 
@@ -65,6 +69,8 @@ function maskSecret(value: string): string {
 }
 
 function upsertAiKeys(file: string, values: Record<(typeof AI_KEYS)[number], string>): void {
+  const dir = path.dirname(file)
+  fs.mkdirSync(dir, { recursive: true })
   const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split(/\r?\n/) : []
   const used = new Set<string>()
   const next = lines.map((line) => {
@@ -98,14 +104,25 @@ function applyEnv(config: AiConfig): void {
 }
 
 function persist(config: AiConfig): void {
-  const file = aiEnvPath()
-  upsertAiKeys(file, {
+  upsertAiKeys(aiEnvPath(), {
     AI_BASE_URL: config.baseUrl,
     AI_API_KEY: config.apiKey,
     AI_MODEL: config.model,
   })
   applyEnv(config)
   cached = config
+}
+
+/** 名单 raw 模式后恢复，方便 clack 弹出填写 */
+function prepareStdinForPrompt(): void {
+  try {
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode?.(false)
+      if (process.stdin.isPaused()) process.stdin.resume()
+    }
+  } catch {
+    /* ignore */
+  }
 }
 
 function abortIfCancel(value: unknown): asserts value is string {
@@ -124,8 +141,13 @@ async function promptAiFields(
   partial: Partial<AiConfig>,
   opts: { keepExisting: boolean; title: string },
 ): Promise<AiConfig> {
+  prepareStdinForPrompt()
+
   if (!process.stdin.isTTY) {
-    throw new Error(`需要交互终端，或手动写入 ${aiEnvPath()}`)
+    const miss = missingKeys(partial)
+    throw new Error(
+      `缺少 AI 配置（${miss.join(', ') || '未知'}）。请在 TTY 运行 \`tkt config\`，或写入 ${aiEnvPath()}`,
+    )
   }
 
   p.intro(opts.title)
@@ -188,13 +210,12 @@ async function promptMissing(partial: Partial<AiConfig>): Promise<AiConfig> {
   const miss = missingKeys(partial)
   return promptAiFields(partial, {
     keepExisting: false,
-    title: `缺少 AI 配置（${miss.join(', ')}）`,
+    title: `缺少 AI 配置，请填写（${miss.join(', ')}）`,
   })
 }
 
 /**
  * `tkt config`：重新填写。有输入则改，空回车保留原值。
- * 若某项原本没有，则该项必须填写。
  */
 export async function reconfigureAiConfig(): Promise<AiConfig> {
   resetAiConfigCache()
@@ -208,15 +229,16 @@ export async function reconfigureAiConfig(): Promise<AiConfig> {
 /** 打印当前配置（Key 脱敏） */
 export function showAiConfig(): void {
   const partial = readFromEnv()
-  const file = aiEnvPath()
-  console.log(`env: ${file}`)
+  console.log(`env: ${aiEnvPath()}`)
+  const pkg = packageEnvPath()
+  if (fs.existsSync(pkg)) console.log(`also: ${pkg}（较低优先级）`)
   console.log(`AI_BASE_URL=${partial.baseUrl ?? '(未设置)'}`)
   console.log(`AI_API_KEY=${partial.apiKey ? maskSecret(partial.apiKey) : '(未设置)'}`)
   console.log(`AI_MODEL=${partial.model ?? '(未设置)'}`)
 }
 
 /**
- * 拦截器：调用 AI 前确保 URL / Key / Model 齐全。
+ * 拦截器：调用 AI 前确保 URL / Key / Model 齐全；缺则跳转填写，不抛环境变量错误。
  */
 export async function interceptAiConfig(): Promise<AiConfig> {
   if (cached) return cached
@@ -230,6 +252,7 @@ export async function interceptAiConfig(): Promise<AiConfig> {
         apiKey: partial.apiKey,
         model: partial.model,
       }
+      applyEnv(config)
       cached = config
       return config
     }
@@ -250,4 +273,27 @@ export async function ensureAiConfig(): Promise<AiConfig> {
 export function resetAiConfigCache(): void {
   cached = null
   inflight = null
+}
+
+/** 鉴权 / 缺 key 类错误 → 应引导重配 */
+export function isAiConfigError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err ?? '')
+  return /api.?key|authorization|unauthor|401|403|invalid.?key|缺少环境变量|AI_API_KEY|AI_BASE_URL|AI_MODEL|Missing.*key|authentication/i.test(
+    msg,
+  )
+}
+
+/**
+ * 鉴权失败时清缓存并引导重填，成功则返回新配置。
+ * 非 TTY / 用户取消则抛出。
+ */
+export async function recoverAiConfig(err: unknown): Promise<AiConfig> {
+  resetAiConfigCache()
+  prepareStdinForPrompt()
+  const partial = readFromEnv()
+  const hint = err instanceof Error ? err.message.slice(0, 120) : String(err).slice(0, 120)
+  return promptAiFields(partial, {
+    keepExisting: true,
+    title: `AI 配置无效，请重新填写（${hint}）`,
+  })
 }
