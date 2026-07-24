@@ -1,3 +1,8 @@
+/**
+ * `tkt usage` + `tkt usage ui`
+ */
+import { Command } from 'commander'
+import { registerUiSubcommand } from '@/server'
 import { resolveProvider } from './provider'
 import { runOnce, runWatch } from './ui'
 
@@ -18,4 +23,23 @@ export async function runUsage(opts: {
     return
   }
   await runWatch(provider, parseIntervalSec(opts.interval, 60) * 1000)
+}
+
+export function registerUsageCommands(program: Command): void {
+  const usage = program
+    .command('usage')
+    .description('Token Plan 用量')
+    .option('-o, --once', '查一次')
+    .option('-i, --interval <seconds>', '刷新间隔', '60')
+    .option('-p, --provider <name>', '覆盖 TKT_PROVIDER')
+    .action(async (opts) => {
+      try {
+        await runUsage(opts)
+      } catch (e) {
+        console.error(e instanceof Error ? e.message : String(e))
+        process.exitCode = 1
+      }
+    })
+
+  registerUiSubcommand(usage, '/usage', '打开用量 UI（/usage）')
 }
