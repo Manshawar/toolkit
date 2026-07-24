@@ -28,7 +28,7 @@ export async function runUsage(opts: {
 export function registerUsageCommands(program: Command): void {
   const usage = program
     .command('usage')
-    .description('Token Plan 用量')
+    .description('Token 用量（Agent + Token Plan）')
     .option('-o, --once', '查一次')
     .option('-i, --interval <seconds>', '刷新间隔', '60')
     .option('-p, --provider <name>', '覆盖 TKT_PROVIDER')

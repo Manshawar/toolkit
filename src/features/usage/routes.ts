@@ -1,9 +1,10 @@
 /**
- * Usage API：Token 用量快照
+ * Usage API：Agent 本地用量 + Token Plan 快照
  * 挂载 /api/usage
  */
 import { Hono } from 'hono'
 import { getEnv, getProviderId } from '@/core/env'
+import { aggregateAgentUsage, parsePeriod } from './agent'
 import { resolveProvider } from './provider'
 import type { UsageSnapshot } from './types'
 
@@ -40,6 +41,12 @@ export function createUsageApiRoutes(): Hono {
       hasKey,
       hint: hasKey ? undefined : '请在 .env 配置 MINIMAX_API_KEY（可选 MINIMAX_API_BASE）',
     })
+  })
+
+  /** 本地 Agent 用量：?period=day|week|month|year */
+  app.get('/agent', (c) => {
+    const period = parsePeriod(c.req.query('period') || undefined)
+    return c.json(aggregateAgentUsage(period))
   })
 
   app.get('/', async (c) => {
