@@ -237,6 +237,51 @@ export function showAiConfig(): void {
   console.log(`AI_MODEL=${partial.model ?? '(未设置)'}`)
 }
 
+/** UI / API：查看配置（Key 脱敏） */
+export function getAiConfigView(): {
+  envPath: string
+  packageEnv?: string
+  baseUrl?: string
+  apiKeyMasked?: string
+  hasKey: boolean
+  model?: string
+} {
+  const partial = readFromEnv()
+  const pkg = packageEnvPath()
+  return {
+    envPath: aiEnvPath(),
+    packageEnv: fs.existsSync(pkg) ? pkg : undefined,
+    baseUrl: partial.baseUrl,
+    apiKeyMasked: partial.apiKey ? maskSecret(partial.apiKey) : undefined,
+    hasKey: Boolean(partial.apiKey),
+    model: partial.model,
+  }
+}
+
+/**
+ * UI 保存：空 Key 保留原值；URL/Model 必填（可用原值兜底）。
+ */
+export function saveAiConfigFields(input: {
+  baseUrl?: string
+  apiKey?: string
+  model?: string
+}): AiConfig {
+  const prev = readFromEnv()
+  const baseUrl = (input.baseUrl ?? '').trim() || prev.baseUrl || ''
+  const apiKey = (input.apiKey ?? '').trim() || prev.apiKey || ''
+  const model = (input.model ?? '').trim() || prev.model || ''
+  if (!baseUrl || !apiKey || !model) {
+    throw new Error('AI Base URL / API Key / Model 均不能为空')
+  }
+  const config: AiConfig = {
+    baseUrl: baseUrl.replace(/\/+$/, ''),
+    apiKey,
+    model,
+  }
+  persist(config)
+  return config
+}
+
 /**
  * 拦截器：调用 AI 前确保 URL / Key / Model 齐全；缺则跳转填写，不抛环境变量错误。
  */

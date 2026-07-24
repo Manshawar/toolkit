@@ -32,6 +32,8 @@ export {
   ensureAiConfig,
   reconfigureAiConfig,
   showAiConfig,
+  getAiConfigView,
+  saveAiConfigFields,
   aiEnvPath,
   resetAiConfigCache,
   isAiConfigError,
