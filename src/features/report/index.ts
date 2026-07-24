@@ -1,7 +1,8 @@
 /**
- * `tkt report` — 本地 AI 编排日报（同 tkt gc 模式）
+ * `tkt report` + `tkt report ui`
  */
 import { Command } from 'commander'
+import { registerUiSubcommand } from '@/server'
 import { runReport } from './run'
 
 function collect(value: string, prev: string[]): string[] {
@@ -9,7 +10,7 @@ function collect(value: string, prev: string[]): string[] {
 }
 
 export function registerReportCommands(program: Command): void {
-  program
+  const report = program
     .command('report')
     .description('本地 AI 生成日报：gather → 写分点 → 归档/剪贴板')
     .option('--date <YYYY-MM-DD>', '日期，默认今天')
@@ -52,4 +53,6 @@ export function registerReportCommands(program: Command): void {
         process.exitCode = 1
       }
     })
+
+  registerUiSubcommand(report, '/report', '打开日报 UI（/report）')
 }

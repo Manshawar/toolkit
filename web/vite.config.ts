@@ -16,7 +16,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8787',
+        target: 'http://127.0.0.1:38471',
         configure(proxy) {
           proxy.on('error', (_err, _req, res) => {
             const r = res as { writeHead?: Function; end?: Function; headersSent?: boolean }
@@ -24,7 +24,7 @@ export default defineConfig({
               r.writeHead(502, { 'Content-Type': 'application/json' })
               r.end?.(
                 JSON.stringify({
-                  error: 'API :8787 未响应，请确认 pnpm ui:dev 的 [api] 进程在跑',
+                  error: 'API :38471 未响应，请确认 pnpm ui:dev 的 [api] 进程在跑',
                 }),
               )
             }

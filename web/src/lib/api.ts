@@ -41,7 +41,7 @@ export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> 
   } catch (e) {
     throw new Error(
       e instanceof Error
-        ? `网络失败: ${e.message}（确认 API :8787 在跑，或重启 pnpm ui:dev）`
+        ? `网络失败: ${e.message}（确认 API :38471 在跑，或重启 pnpm ui:dev）`
         : '网络失败',
     )
   }

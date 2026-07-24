@@ -10,6 +10,7 @@ import { ReportOverviewPage } from '@web/pages/report/overview'
 import { ReportPrefsPage } from '@web/pages/report/prefs'
 import { ReportRosterPage } from '@web/pages/report/roster'
 import { SettingPage } from '@web/pages/setting'
+import { UsagePage } from '@web/pages/usage'
 
 export function App() {
   const [path, setPath] = useState(typeof location !== 'undefined' ? location.pathname : '/')
@@ -24,6 +25,7 @@ export function App() {
         <ReportHistoryEditPage path="/report/history/:date" />
         <ReportRosterPage path="/report/roster" />
         <ReportPrefsPage path="/report/prefs" />
+        <UsagePage path="/usage" />
         <BenchPage path="/bench" />
         <SettingPage path="/setting" />
       </Router>

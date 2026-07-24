@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 本地联调：Vite (5173) + Hono API (8787)
+ * 本地联调：Vite (5173) + Hono API (38471)
  * 浏览器开 http://127.0.0.1:5173/ ，/api 已代理到 Node。
  * API 异常退出会自动重启（不拖垮 Vite）。
  */
@@ -77,7 +77,7 @@ function startApi() {
 process.on('SIGINT', () => shutdown(0))
 process.on('SIGTERM', () => shutdown(0))
 
-console.log('ui:dev → http://127.0.0.1:5173/  (API → :8787)')
+console.log('ui:dev → http://127.0.0.1:5173/  (API → :38471)')
 startApi()
 run('web', 'pnpm', ['--dir', 'web', 'dev'], {
   onExit(code) {

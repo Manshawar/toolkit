@@ -9,6 +9,13 @@ const ROUTES = [
     hint: 'Report',
   },
   {
+    href: '/usage',
+    label: '用量',
+    title: 'Token 用量',
+    desc: 'MiniMax Token Plan 剩余窗口与计数。',
+    hint: 'Usage',
+  },
+  {
     href: '/bench',
     label: '测速',
     title: '网关测速',
@@ -18,8 +25,8 @@ const ROUTES = [
   {
     href: '/setting',
     label: '设置',
-    title: 'AI 配置',
-    desc: '全局网关与模型，供 gc、report、agent 共用。',
+    title: '全局配置',
+    desc: 'AI 网关与 CLI 更新检查间隔。',
     hint: 'Setting',
   },
 ] as const
@@ -41,7 +48,7 @@ export function HomePage(_props: { path?: string }) {
         </p>
       </section>
 
-      <section class="animate-rise-delay-1 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <section class="animate-rise-delay-1 grid gap-4 sm:grid-cols-2">
         {ROUTES.map((item, i) => (
           <a
             key={item.href}

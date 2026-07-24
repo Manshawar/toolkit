@@ -20,7 +20,7 @@ import { config as loadDotenv } from 'dotenv'
 import { Command } from 'commander'
 import { runGrp } from './features/grp'
 import { runServe } from './features/sv'
-import { runUsage } from './features/usage'
+import { registerUsageCommands } from './features/usage'
 import { registerGitSubmitCommands } from './features/git-submit'
 import { registerAgentCommands } from './features/agent'
 import { registerBenchCommands } from './features/bench'
@@ -28,7 +28,7 @@ import { registerReportCommands } from './features/report'
 import { runPromptList, runPromptShow } from './features/prompts'
 import { reconfigureAiConfig, showAiConfig } from './agent'
 import { interceptCliUpdate } from './core/update-check'
-import { startUiServer, DEFAULT_PORT } from './server'
+import { startUiServer, registerUiSubcommand, DEFAULT_PORT } from './server'
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 loadDotenv({ path: path.join(packageRoot, '.env'), quiet: true })
@@ -44,20 +44,7 @@ async function main() {
     .description('fnm 切 Node 后 npm run serve')
     .action((v?: string) => runServe(v))
 
-  program
-    .command('usage')
-    .description('Token Plan 用量')
-    .option('-o, --once', '查一次')
-    .option('-i, --interval <seconds>', '刷新间隔', '60')
-    .option('-p, --provider <name>', '覆盖 TKT_PROVIDER')
-    .action(async (opts) => {
-      try {
-        await runUsage(opts)
-      } catch (e) {
-        console.error(e instanceof Error ? e.message : String(e))
-        process.exitCode = 1
-      }
-    })
+  registerUsageCommands(program)
 
   const prompt = program.command('prompt').description('提取 AI prompt')
   prompt
@@ -69,7 +56,7 @@ async function main() {
     .option('--json', 'JSON')
     .action((id: string, o) => runPromptShow(id, { json: Boolean(o.json) }))
 
-  program
+  const configCmd = program
     .command('config')
     .description('重新填写 AI 配置（有值覆盖，空回车保留）')
     .option('--show', '只查看当前配置（Key 脱敏）')
@@ -82,6 +69,7 @@ async function main() {
         process.exitCode = 1
       }
     })
+  registerUiSubcommand(configCmd, '/setting', '打开 AI 配置 UI（/setting）')
 
   registerGitSubmitCommands(program)
   registerAgentCommands(program)
@@ -90,10 +78,16 @@ async function main() {
 
   program
     .command('ui')
-    .description('本地 HTML 工具页（Hono 单端口）')
+    .description('本地工具台导航页（Hono 单端口 SPA）')
     .option('--port <n>', '端口', String(DEFAULT_PORT))
+    .option('--no-open', '不自动打开浏览器')
+    .option('--path <route>', '打开指定路由，如 /report', '/')
     .action((opts) => {
-      startUiServer({ port: parseInt(String(opts.port), 10) || DEFAULT_PORT })
+      startUiServer({
+        port: parseInt(String(opts.port), 10) || DEFAULT_PORT,
+        path: typeof opts.path === 'string' ? opts.path : '/',
+        open: opts.open !== false,
+      })
     })
 
   program.version(pkg.version, '-v, --vers')

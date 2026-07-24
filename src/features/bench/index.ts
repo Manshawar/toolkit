@@ -2,7 +2,7 @@
  * `tkt bench` + `tkt bench ui`
  */
 import { Command } from 'commander'
-import { startUiServer, DEFAULT_PORT } from '@/server'
+import { registerUiSubcommand } from '@/server'
 import { runBenchCli } from './cli'
 
 function parseConcurrency(raw: unknown): number {
@@ -54,11 +54,5 @@ export function registerBenchCommands(program: Command): void {
       }
     })
 
-  bench
-    .command('ui')
-    .description('启动本地 UI（同 tkt ui）')
-    .option('--port <n>', '端口', String(DEFAULT_PORT))
-    .action((opts) => {
-      startUiServer({ port: parseInt(String(opts.port), 10) || DEFAULT_PORT })
-    })
+  registerUiSubcommand(bench, '/bench', '打开测速 UI（/bench）')
 }
