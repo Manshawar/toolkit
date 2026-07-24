@@ -1,5 +1,11 @@
-import { render } from 'preact'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
 import { App } from './app'
 import './index.css'
 
-render(<App />, document.getElementById('app')!)
+const root = document.getElementById('app')!
+createRoot(root).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)

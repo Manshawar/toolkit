@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite'
-import preact from '@preact/preset-vite'
+import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
 /** SPA → ../assets/ui（随包发布，供 tkt ui 托管） */
 export default defineConfig({
-  plugins: [preact(), tailwindcss()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       '@web': resolve(__dirname, 'src'),

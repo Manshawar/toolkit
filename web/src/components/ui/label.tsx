@@ -1,17 +1,15 @@
-import { type JSX } from 'preact'
+import type { ComponentProps } from 'react'
 import { cn } from '@web/lib/utils'
 
 export function Label({
-  class: className,
-  className: classNameAlt,
+  className,
   ...props
-}: JSX.IntrinsicElements['label']) {
+}: ComponentProps<'label'>) {
   return (
     <label
-      class={cn(
+      className={cn(
         'text-[11px] font-semibold uppercase tracking-[0.08em] text-muted',
         className,
-        classNameAlt,
       )}
       {...props}
     />

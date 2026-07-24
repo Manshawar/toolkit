@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'preact/hooks'
+import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@web/components/ui/badge'
 import { Button } from '@web/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@web/components/ui/card'
@@ -19,7 +19,7 @@ const LINE_COLORS = [
   '#e9c46a', '#264653', '#f4a261', '#6d597a', '#355070',
 ]
 
-export function BenchPage(_props: { path?: string }) {
+export function BenchPage() {
   const [health, setHealth] = useState<Health | null>(null)
   const [baseUrl, setBaseUrl] = useState('')
   const [apiKey, setApiKey] = useState('')
@@ -248,21 +248,21 @@ export function BenchPage(_props: { path?: string }) {
     'h-10 rounded-md border border-border bg-white/90 px-3 text-sm transition-colors focus-visible:border-primary/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30'
 
   return (
-    <div class="animate-rise space-y-6">
-      <header class="space-y-2">
-        <h1 class="font-display text-2xl font-bold tracking-tight sm:text-[1.75rem]">
+    <div className="animate-rise space-y-6">
+      <header className="space-y-2">
+        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-[1.75rem]">
           网关测速
         </h1>
-        <p class="max-w-xl text-sm leading-relaxed text-muted">
+        <p className="max-w-xl text-sm leading-relaxed text-muted">
           对比模型总耗时与首包延迟。定时探测跑在服务端，关页面也会继续。
         </p>
       </header>
 
       <Card>
         <CardHeader>
-          <div class="flex min-w-0 flex-1 items-center gap-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <span
-              class={`size-2 shrink-0 rounded-full ${healthOk ? 'bg-success' : 'bg-border'}`}
+              className={`size-2 shrink-0 rounded-full ${healthOk ? 'bg-success' : 'bg-border'}`}
               aria-hidden
             />
             <CardTitle>{healthOk ? '网关已就绪' : '网关配置'}</CardTitle>
@@ -271,8 +271,8 @@ export function BenchPage(_props: { path?: string }) {
             刷新
           </Button>
         </CardHeader>
-        <div class="flex flex-wrap gap-3">
-          <div class="min-w-[240px] flex-1 space-y-1.5">
+        <div className="flex flex-wrap gap-3">
+          <div className="min-w-[240px] flex-1 space-y-1.5">
             <Label>Base URL</Label>
             <Input
               value={baseUrl}
@@ -280,7 +280,7 @@ export function BenchPage(_props: { path?: string }) {
               onInput={(e) => setBaseUrl((e.target as HTMLInputElement).value)}
             />
           </div>
-          <div class="min-w-[200px] flex-1 space-y-1.5">
+          <div className="min-w-[200px] flex-1 space-y-1.5">
             <Label>API Key</Label>
             <Input
               type="password"
@@ -293,16 +293,16 @@ export function BenchPage(_props: { path?: string }) {
               onInput={(e) => setApiKey((e.target as HTMLInputElement).value)}
             />
           </div>
-          <div class="flex items-end">
+          <div className="flex items-end">
             <Button onClick={() => void saveConfig()}>保存</Button>
           </div>
         </div>
-        <p class="mt-3 text-xs text-muted">
+        <p className="mt-3 text-xs text-muted">
           保存在本机 {health?.configPath || '~/.config/tkt/bench/gateway.json'}
         </p>
         {healthMsg ? (
           <p
-            class={`mt-2 whitespace-pre-wrap text-sm ${healthOk ? 'text-success' : 'text-destructive'}`}
+            className={`mt-2 whitespace-pre-wrap text-sm ${healthOk ? 'text-success' : 'text-destructive'}`}
           >
             {healthMsg}
           </p>
@@ -312,7 +312,7 @@ export function BenchPage(_props: { path?: string }) {
       <Card>
         <CardHeader>
           <CardTitle>测速参数</CardTitle>
-          <div class="ml-auto flex flex-wrap gap-2">
+          <div className="ml-auto flex flex-wrap gap-2">
             <Button variant="secondary" disabled={disabled} onClick={() => void loadModels()}>
               加载模型
             </Button>
@@ -322,8 +322,8 @@ export function BenchPage(_props: { path?: string }) {
           </div>
         </CardHeader>
 
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div class="space-y-1.5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-1.5">
             <Label>轮次</Label>
             <Input
               type="number"
@@ -333,7 +333,7 @@ export function BenchPage(_props: { path?: string }) {
               onInput={(e) => setRounds(Number((e.target as HTMLInputElement).value) || 1)}
             />
           </div>
-          <div class="space-y-1.5">
+          <div className="space-y-1.5">
             <Label>并发</Label>
             <Input
               type="number"
@@ -345,7 +345,7 @@ export function BenchPage(_props: { path?: string }) {
               }
             />
           </div>
-          <div class="space-y-1.5">
+          <div className="space-y-1.5">
             <Label>错峰 (ms)</Label>
             <Input
               type="number"
@@ -357,10 +357,10 @@ export function BenchPage(_props: { path?: string }) {
               }
             />
           </div>
-          <div class="space-y-1.5">
+          <div className="space-y-1.5">
             <Label>排序</Label>
             <select
-              class={selectClass}
+              className={selectClass}
               value={sortBy}
               onChange={(e) =>
                 setSortBy((e.target as HTMLSelectElement).value as 'total' | 'ttft')
@@ -372,7 +372,7 @@ export function BenchPage(_props: { path?: string }) {
           </div>
         </div>
 
-        <div class="mt-3 space-y-1.5">
+        <div className="mt-3 space-y-1.5">
           <Label>提示词前缀</Label>
           <Input
             value={prompt}
@@ -381,7 +381,7 @@ export function BenchPage(_props: { path?: string }) {
           />
         </div>
 
-        <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-border/70 pt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/70 pt-4">
           <Button
             variant="secondary"
             size="sm"
@@ -398,14 +398,14 @@ export function BenchPage(_props: { path?: string }) {
           >
             全不选
           </Button>
-          <span class="text-sm text-muted">{modelMeta}</span>
+          <span className="text-sm text-muted">{modelMeta}</span>
         </div>
 
-        <div class="mt-3 grid max-h-[280px] grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-1.5 overflow-auto rounded-xl bg-surface/50 p-2">
+        <div className="mt-3 grid max-h-[280px] grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-1.5 overflow-auto rounded-xl bg-surface/50 p-2">
           {models.map((id) => (
             <label
               key={id}
-              class="flex cursor-pointer items-start gap-2 rounded-md px-2.5 py-2 text-sm transition-colors hover:bg-card"
+              className="flex cursor-pointer items-start gap-2 rounded-md px-2.5 py-2 text-sm transition-colors hover:bg-card"
             >
               <Checkbox
                 checked={!!selected[id]}
@@ -415,14 +415,14 @@ export function BenchPage(_props: { path?: string }) {
                   void refreshWatch()
                 }}
               />
-              <span class="break-all leading-snug">{id}</span>
+              <span className="break-all leading-snug">{id}</span>
             </label>
           ))}
         </div>
 
         {runStatus ? (
           <p
-            class={`mt-3 whitespace-pre-wrap text-sm ${
+            className={`mt-3 whitespace-pre-wrap text-sm ${
               runOk
                 ? 'text-success'
                 : runStatus.includes('失败') || runStatus.includes('请')
@@ -438,23 +438,23 @@ export function BenchPage(_props: { path?: string }) {
       <Card>
         <CardHeader>
           <CardTitle>单次排行</CardTitle>
-          {rec ? <span class="text-sm text-muted">{rec}</span> : null}
+          {rec ? <span className="text-sm text-muted">{rec}</span> : null}
         </CardHeader>
-        <div class="overflow-x-auto rounded-xl border border-border/70">
-          <table class="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border border-border/70">
+          <table className="w-full text-sm">
             <thead>
-              <tr class="bg-surface/60 text-left text-[11px] uppercase tracking-[0.06em] text-muted">
-                <th class="px-3 py-2.5 text-right font-semibold">#</th>
-                <th class="px-3 py-2.5 font-semibold">模型</th>
-                <th class="px-3 py-2.5 text-right font-semibold">总耗时</th>
-                <th class="px-3 py-2.5 text-right font-semibold">首包</th>
-                <th class="px-3 py-2.5 text-right font-semibold">成功</th>
+              <tr className="bg-surface/60 text-left text-[11px] uppercase tracking-[0.06em] text-muted">
+                <th className="px-3 py-2.5 text-right font-semibold">#</th>
+                <th className="px-3 py-2.5 font-semibold">模型</th>
+                <th className="px-3 py-2.5 text-right font-semibold">总耗时</th>
+                <th className="px-3 py-2.5 text-right font-semibold">首包</th>
+                <th className="px-3 py-2.5 text-right font-semibold">成功</th>
               </tr>
             </thead>
             <tbody>
               {!ranked.length ? (
                 <tr>
-                  <td colSpan={5} class="px-3 py-8 text-center text-muted">
+                  <td colSpan={5} className="px-3 py-8 text-center text-muted">
                     尚未测速
                   </td>
                 </tr>
@@ -462,20 +462,20 @@ export function BenchPage(_props: { path?: string }) {
                 ranked.map((r, i) => (
                   <tr
                     key={r.model}
-                    class={`border-t border-border/70 ${i === 0 ? 'bg-accent/35 font-semibold' : ''}`}
+                    className={`border-t border-border/70 ${i === 0 ? 'bg-accent/35 font-semibold' : ''}`}
                   >
-                    <td class="px-3 py-2.5 text-right tabular-nums text-muted">{i + 1}</td>
-                    <td class="px-3 py-2.5">
+                    <td className="px-3 py-2.5 text-right tabular-nums text-muted">{i + 1}</td>
+                    <td className="px-3 py-2.5">
                       {r.model}
                       {i === 0 ? <Badge>推荐</Badge> : null}
                     </td>
-                    <td class="px-3 py-2.5 text-right tabular-nums">
+                    <td className="px-3 py-2.5 text-right tabular-nums">
                       {r.totalSec != null ? `${Number(r.totalSec).toFixed(2)}s` : '—'}
                     </td>
-                    <td class="px-3 py-2.5 text-right tabular-nums">
+                    <td className="px-3 py-2.5 text-right tabular-nums">
                       {r.ttftSec != null ? `${Number(r.ttftSec).toFixed(2)}s` : '—'}
                     </td>
-                    <td class="px-3 py-2.5 text-right tabular-nums">
+                    <td className="px-3 py-2.5 text-right tabular-nums">
                       {r.okRounds}/{r.rounds}
                     </td>
                   </tr>
@@ -485,7 +485,7 @@ export function BenchPage(_props: { path?: string }) {
           </table>
         </div>
         {failed.length ? (
-          <div class="mt-3 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+          <div className="mt-3 rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
             {failed.map((f) => (
               <p key={f.model}>
                 {f.model}: {f.error}
@@ -497,12 +497,12 @@ export function BenchPage(_props: { path?: string }) {
 
       <Card>
         <CardHeader className="items-start">
-          <div class="min-w-0 flex-1 space-y-1">
+          <div className="min-w-0 flex-1 space-y-1">
             <CardTitle>定时探测</CardTitle>
-            <p class="text-xs text-muted">服务端定时跑；折线为总耗时走势，排行按均值。</p>
+            <p className="text-xs text-muted">服务端定时跑；折线为总耗时走势，排行按均值。</p>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <label class="flex items-center gap-2 rounded-md border border-border/80 bg-surface/40 px-3 py-1.5 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 rounded-md border border-border/80 bg-surface/40 px-3 py-1.5 text-sm">
               <Checkbox
                 checked={watchOn}
                 disabled={!ready}
@@ -531,14 +531,14 @@ export function BenchPage(_props: { path?: string }) {
               />
               开启
             </label>
-            <div class="flex items-center gap-2">
-              <Label class="normal-case tracking-normal">间隔</Label>
+            <div className="flex items-center gap-2">
+              <Label className="normal-case tracking-normal">间隔</Label>
               <Input
                 type="number"
                 min={1}
                 max={120}
                 value={watchMin}
-                class="w-16"
+                className="w-16"
                 onInput={(e) =>
                   setWatchMin(Number((e.target as HTMLInputElement).value) || 10)
                 }
@@ -552,7 +552,7 @@ export function BenchPage(_props: { path?: string }) {
                   await refreshWatch()
                 }}
               />
-              <span class="text-xs text-muted">分</span>
+              <span className="text-xs text-muted">分</span>
             </div>
             <Button
               variant="secondary"
@@ -609,7 +609,7 @@ export function BenchPage(_props: { path?: string }) {
 
         {watchMsg ? (
           <p
-            class={`mb-3 whitespace-pre-wrap text-sm ${
+            className={`mb-3 whitespace-pre-wrap text-sm ${
               watchMsg.includes('错误')
                 ? 'text-destructive'
                 : watchOk
@@ -627,23 +627,23 @@ export function BenchPage(_props: { path?: string }) {
           colors={LINE_COLORS}
         />
 
-        <div class="mt-5">
-          <CardTitle class="mb-3">均值排行</CardTitle>
-          <div class="overflow-x-auto rounded-xl border border-border/70">
-            <table class="w-full text-sm">
+        <div className="mt-5">
+          <CardTitle className="mb-3">均值排行</CardTitle>
+          <div className="overflow-x-auto rounded-xl border border-border/70">
+            <table className="w-full text-sm">
               <thead>
-                <tr class="bg-surface/60 text-left text-[11px] uppercase tracking-[0.06em] text-muted">
-                  <th class="px-3 py-2.5 text-right font-semibold">#</th>
-                  <th class="px-3 py-2.5 font-semibold">模型</th>
-                  <th class="px-3 py-2.5 text-right font-semibold">均值</th>
-                  <th class="px-3 py-2.5 text-right font-semibold">标准差</th>
-                  <th class="px-3 py-2.5 text-right font-semibold">样本</th>
+                <tr className="bg-surface/60 text-left text-[11px] uppercase tracking-[0.06em] text-muted">
+                  <th className="px-3 py-2.5 text-right font-semibold">#</th>
+                  <th className="px-3 py-2.5 font-semibold">模型</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">均值</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">标准差</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">样本</th>
                 </tr>
               </thead>
               <tbody>
                 {!(watch?.stability?.length) ? (
                   <tr>
-                    <td colSpan={5} class="px-3 py-8 text-center text-muted">
+                    <td colSpan={5} className="px-3 py-8 text-center text-muted">
                       尚无历史，开启定时或点「立刻探测」
                     </td>
                   </tr>
@@ -651,22 +651,22 @@ export function BenchPage(_props: { path?: string }) {
                   watch!.stability!.map((r, i) => (
                     <tr
                       key={r.model}
-                      class={`border-t border-border/70 ${i === 0 ? 'bg-accent/35 font-semibold' : ''}`}
+                      className={`border-t border-border/70 ${i === 0 ? 'bg-accent/35 font-semibold' : ''}`}
                     >
-                      <td class="px-3 py-2.5 text-right tabular-nums text-muted">
+                      <td className="px-3 py-2.5 text-right tabular-nums text-muted">
                         {i + 1}
                       </td>
-                      <td class="px-3 py-2.5">
+                      <td className="px-3 py-2.5">
                         {r.model}
                         {i === 0 ? <Badge>最稳</Badge> : null}
                       </td>
-                      <td class="px-3 py-2.5 text-right tabular-nums">
+                      <td className="px-3 py-2.5 text-right tabular-nums">
                         {Number(r.avg).toFixed(2)}s
                       </td>
-                      <td class="px-3 py-2.5 text-right tabular-nums">
+                      <td className="px-3 py-2.5 text-right tabular-nums">
                         {Number(r.sd).toFixed(2)}s
                       </td>
-                      <td class="px-3 py-2.5 text-right tabular-nums">{r.n}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums">{r.n}</td>
                     </tr>
                   ))
                 )}

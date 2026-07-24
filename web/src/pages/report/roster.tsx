@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useState } from 'react'
 import { Button } from '@web/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@web/components/ui/card'
 import { Checkbox } from '@web/components/ui/checkbox'
@@ -7,7 +7,7 @@ import { fetchJson } from '@web/lib/api'
 import { ReportLayout } from '@web/pages/report/layout'
 import type { ReportSettingView, RepoRow } from '@web/pages/report/types'
 
-export function ReportRosterPage(_props: { path?: string }) {
+export function ReportRosterPage() {
   const [repos, setRepos] = useState<RepoRow[]>([])
   const [pathInput, setPathInput] = useState('')
   const [msg, setMsg] = useState('')
@@ -91,13 +91,13 @@ export function ReportRosterPage(_props: { path?: string }) {
             保存
           </Button>
         </CardHeader>
-        <p class="mb-4 text-sm text-muted">
+        <p className="mb-4 text-sm text-muted">
           勾选后才会参与采集。书写名为日报【】内中文名。后续可再拆子页管理。
         </p>
 
-        <div class="mb-4 flex flex-wrap gap-2">
+        <div className="mb-4 flex flex-wrap gap-2">
           <Input
-            class="min-w-[220px] flex-1"
+            className="min-w-[220px] flex-1"
             value={pathInput}
             placeholder="添加本地仓库绝对路径…"
             onInput={(e) => setPathInput((e.target as HTMLInputElement).value)}
@@ -107,19 +107,19 @@ export function ReportRosterPage(_props: { path?: string }) {
           </Button>
         </div>
 
-        <p class={`mb-3 text-sm ${ok ? 'text-success' : 'text-destructive'}`}>{msg}</p>
+        <p className={`mb-3 text-sm ${ok ? 'text-success' : 'text-destructive'}`}>{msg}</p>
 
         {!repos.length ? (
-          <p class="text-sm text-muted">名单为空。输入路径加入，或跑一次 CLI report。</p>
+          <p className="text-sm text-muted">名单为空。输入路径加入，或跑一次 CLI report。</p>
         ) : (
-          <ul class="space-y-3">
+          <ul className="space-y-3">
             {repos.map((r, idx) => (
               <li
                 key={r.path}
-                class="rounded-xl border border-border/70 bg-background/40 px-3 py-3"
+                className="rounded-xl border border-border/70 bg-background/40 px-3 py-3"
               >
-                <div class="flex flex-wrap items-start gap-3">
-                  <label class="mt-2 flex items-center gap-2 text-sm">
+                <div className="flex flex-wrap items-start gap-3">
+                  <label className="mt-2 flex items-center gap-2 text-sm">
                     <Checkbox
                       checked={r.enabled}
                       onChange={(e) => {
@@ -131,7 +131,7 @@ export function ReportRosterPage(_props: { path?: string }) {
                     />
                     启用
                   </label>
-                  <div class="min-w-0 flex-1 space-y-1.5">
+                  <div className="min-w-0 flex-1 space-y-1.5">
                     <Input
                       value={r.display_name}
                       placeholder={r.alias || '中文书写名'}
@@ -144,7 +144,7 @@ export function ReportRosterPage(_props: { path?: string }) {
                         )
                       }}
                     />
-                    <p class="truncate font-mono text-[11px] text-muted" title={r.path}>
+                    <p className="truncate font-mono text-[11px] text-muted" title={r.path}>
                       {r.alias} · {r.path}
                     </p>
                   </div>

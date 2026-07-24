@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'preact/hooks'
-import { route } from 'preact-router'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@web/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@web/components/ui/card'
 import { Input } from '@web/components/ui/input'
@@ -9,8 +9,10 @@ import { ReportLayout } from '@web/pages/report/layout'
 import { PieChart } from '@web/pages/report/pie'
 import type { ReportItem, ReportRecord } from '@web/pages/report/types'
 
-export function ReportHistoryEditPage(props: { path?: string; date?: string }) {
-  const date = props.date || ''
+export function ReportHistoryEditPage() {
+  const { date: dateParam = '' } = useParams<{ date: string }>()
+  const date = dateParam
+  const navigate = useNavigate()
   const [rec, setRec] = useState<ReportRecord | null>(null)
   const [sheetTime, setSheetTime] = useState('')
   const [items, setItems] = useState<ReportItem[]>([])
@@ -76,18 +78,18 @@ export function ReportHistoryEditPage(props: { path?: string; date?: string }) {
 
   return (
     <ReportLayout path={`/report/history/${date}`}>
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={() => route('/report/history')}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/report/history')}>
           ← 归档列表
         </Button>
-        <p class="font-display text-lg font-bold tabular-nums">{date}</p>
+        <p className="font-display text-lg font-bold tabular-nums">{date}</p>
       </div>
 
       {msg ? (
-        <p class={`text-sm ${ok ? 'text-success' : 'text-destructive'}`}>{msg}</p>
+        <p className={`text-sm ${ok ? 'text-success' : 'text-destructive'}`}>{msg}</p>
       ) : null}
 
-      <div class="grid gap-4 lg:grid-cols-[1fr_0.85fr]">
+      <div className="grid gap-4 lg:grid-cols-[1fr_0.85fr]">
         <Card>
           <CardHeader>
             <CardTitle>编辑 · 合计 {total}h</CardTitle>
@@ -95,20 +97,20 @@ export function ReportHistoryEditPage(props: { path?: string; date?: string }) {
               保存
             </Button>
           </CardHeader>
-          <div class="mb-4 space-y-1.5">
+          <div className="mb-4 space-y-1.5">
             <Label>sheetTime</Label>
             <Input
               value={sheetTime}
               onInput={(e) => setSheetTime((e.target as HTMLInputElement).value)}
             />
           </div>
-          <ul class="space-y-3">
+          <ul className="space-y-3">
             {items.map((it, idx) => (
               <li
                 key={idx}
-                class="rounded-xl border border-border/70 bg-background/40 p-3 space-y-2"
+                className="rounded-xl border border-border/70 bg-background/40 p-3 space-y-2"
               >
-                <div class="grid gap-2 sm:grid-cols-[1fr_5.5rem]">
+                <div className="grid gap-2 sm:grid-cols-[1fr_5.5rem]">
                   <Input
                     value={it.project}
                     placeholder="项目"
@@ -152,7 +154,7 @@ export function ReportHistoryEditPage(props: { path?: string; date?: string }) {
               </li>
             ))}
           </ul>
-          <div class="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             <Button
               variant="secondary"
               size="sm"
@@ -167,7 +169,7 @@ export function ReportHistoryEditPage(props: { path?: string; date?: string }) {
             </Button>
           </div>
           {rec ? (
-            <p class="mt-3 text-xs text-muted">
+            <p className="mt-3 text-xs text-muted">
               角色 {rec.role} · 目标 {rec.targetHours}h · commits {rec.commitCount}
             </p>
           ) : null}
@@ -178,7 +180,7 @@ export function ReportHistoryEditPage(props: { path?: string; date?: string }) {
             <CardTitle>当日任务分布</CardTitle>
           </CardHeader>
           {!pieSlices.length ? (
-            <p class="text-sm text-muted">无条目</p>
+            <p className="text-sm text-muted">无条目</p>
           ) : (
             <PieChart slices={pieSlices} size={160} />
           )}

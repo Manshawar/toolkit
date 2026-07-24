@@ -1,4 +1,4 @@
-import { useMemo } from 'preact/hooks'
+import { useMemo } from 'react'
 import { escapeHtml } from '@web/lib/api'
 
 type Probe = { at: string; points: Array<{ model: string; totalSec: number }> }
@@ -89,19 +89,19 @@ export function LatencyChart({
   }, [probes, selected, colors])
 
   return (
-    <div class="mt-1">
-      <div class="overflow-x-auto rounded-xl border border-border/70 bg-white/90">
+    <div className="mt-1">
+      <div className="overflow-x-auto rounded-xl border border-border/70 bg-white/90">
         <svg
           viewBox="0 0 900 280"
           preserveAspectRatio="none"
-          class="block h-[280px] w-full min-w-[640px]"
+          className="block h-[280px] w-full min-w-[640px]"
           dangerouslySetInnerHTML={{ __html: svgHtml }}
         />
       </div>
-      <div class="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
         {legend.map((l) => (
-          <span key={l.model} class="inline-flex items-center gap-1.5">
-            <i class="inline-block h-1.5 w-3.5 rounded-sm" style={{ background: l.color }} />
+          <span key={l.model} className="inline-flex items-center gap-1.5">
+            <i className="inline-block h-1.5 w-3.5 rounded-sm" style={{ background: l.color }} />
             {l.model}
           </span>
         ))}

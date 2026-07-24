@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from 'class-variance-authority'
-import { type JSX } from 'preact'
+import type { ComponentProps } from 'react'
 import { cn } from '@web/lib/utils'
 
 const buttonVariants = cva(
@@ -25,11 +25,11 @@ const buttonVariants = cva(
 )
 
 export interface ButtonProps
-  extends Omit<JSX.IntrinsicElements['button'], 'size'>,
+  extends Omit<ComponentProps<'button'>, 'size'>,
     VariantProps<typeof buttonVariants> {}
 
 export function Button({ className, variant, size, ...props }: ButtonProps) {
   return (
-    <button class={cn(buttonVariants({ variant, size }), className)} {...props} />
+    <button className={cn(buttonVariants({ variant, size }), className)} {...props} />
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useState } from 'react'
 import { Button } from '@web/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@web/components/ui/card'
 import { Input } from '@web/components/ui/input'
@@ -18,7 +18,7 @@ type UpdatePrefs = {
   checkIntervalHours: number
 }
 
-export function SettingPage(_props: { path?: string }) {
+export function SettingPage() {
   const [info, setInfo] = useState<AiSetting | null>(null)
   const [baseUrl, setBaseUrl] = useState('')
   const [apiKey, setApiKey] = useState('')
@@ -125,21 +125,21 @@ export function SettingPage(_props: { path?: string }) {
   }, [])
 
   return (
-    <div class="animate-rise mx-auto max-w-xl space-y-6">
-      <header class="space-y-2">
-        <h1 class="font-display text-2xl font-bold tracking-tight sm:text-[1.75rem]">
+    <div className="animate-rise mx-auto max-w-xl space-y-6">
+      <header className="space-y-2">
+        <h1 className="font-display text-2xl font-bold tracking-tight sm:text-[1.75rem]">
           全局配置
         </h1>
-        <p class="text-sm leading-relaxed text-muted">
+        <p className="text-sm leading-relaxed text-muted">
           AI 网关与 CLI 更新检查，写入本机配置，供 CLI 与 agent 共用。
         </p>
       </header>
 
       <Card>
         <CardHeader>
-          <div class="flex min-w-0 flex-1 items-center gap-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <span
-              class={`size-2 shrink-0 rounded-full ${ok ? 'bg-success' : 'bg-border'}`}
+              className={`size-2 shrink-0 rounded-full ${ok ? 'bg-success' : 'bg-border'}`}
               aria-hidden
             />
             <CardTitle>AI 网关</CardTitle>
@@ -149,8 +149,8 @@ export function SettingPage(_props: { path?: string }) {
           </Button>
         </CardHeader>
 
-        <div class="space-y-4">
-          <div class="space-y-1.5">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
             <Label>Base URL</Label>
             <Input
               value={baseUrl}
@@ -158,7 +158,7 @@ export function SettingPage(_props: { path?: string }) {
               onInput={(e) => setBaseUrl((e.target as HTMLInputElement).value)}
             />
           </div>
-          <div class="space-y-1.5">
+          <div className="space-y-1.5">
             <Label>API Key</Label>
             <Input
               type="password"
@@ -171,7 +171,7 @@ export function SettingPage(_props: { path?: string }) {
               onInput={(e) => setApiKey((e.target as HTMLInputElement).value)}
             />
           </div>
-          <div class="space-y-1.5">
+          <div className="space-y-1.5">
             <Label>Model</Label>
             <Input
               value={model}
@@ -180,12 +180,12 @@ export function SettingPage(_props: { path?: string }) {
             />
           </div>
 
-          <div class="flex flex-wrap items-center gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-3 pt-1">
             <Button disabled={busy} onClick={() => void save()}>
               保存配置
             </Button>
             <p
-              class={`text-sm ${ok ? 'text-success' : msg.includes('请') ? 'text-muted' : 'text-destructive'}`}
+              className={`text-sm ${ok ? 'text-success' : msg.includes('请') ? 'text-muted' : 'text-destructive'}`}
             >
               {msg}
             </p>
@@ -195,9 +195,9 @@ export function SettingPage(_props: { path?: string }) {
 
       <Card>
         <CardHeader>
-          <div class="flex min-w-0 flex-1 items-center gap-2.5">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
             <span
-              class={`size-2 shrink-0 rounded-full ${updateOk ? 'bg-success' : 'bg-border'}`}
+              className={`size-2 shrink-0 rounded-full ${updateOk ? 'bg-success' : 'bg-border'}`}
               aria-hidden
             />
             <CardTitle>更新检查</CardTitle>
@@ -207,8 +207,8 @@ export function SettingPage(_props: { path?: string }) {
           </Button>
         </CardHeader>
 
-        <div class="space-y-4">
-          <div class="space-y-1.5">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
             <Label>检查间隔（小时）</Label>
             <Input
               type="number"
@@ -219,15 +219,15 @@ export function SettingPage(_props: { path?: string }) {
               placeholder="3"
               onInput={(e) => setIntervalHours((e.target as HTMLInputElement).value)}
             />
-            <p class="text-xs text-muted">默认 3；设为 0 关闭。CLI 启动时后台检查 npm 新版本。</p>
+            <p className="text-xs text-muted">默认 3；设为 0 关闭。CLI 启动时后台检查 npm 新版本。</p>
           </div>
 
-          <div class="flex flex-wrap items-center gap-3 pt-1">
+          <div className="flex flex-wrap items-center gap-3 pt-1">
             <Button disabled={updateBusy} onClick={() => void saveUpdate()}>
               保存
             </Button>
             <p
-              class={`text-sm ${updateOk ? 'text-success' : updateMsg ? 'text-destructive' : 'text-muted'}`}
+              className={`text-sm ${updateOk ? 'text-success' : updateMsg ? 'text-destructive' : 'text-muted'}`}
             >
               {updateMsg}
             </p>
@@ -235,13 +235,13 @@ export function SettingPage(_props: { path?: string }) {
         </div>
       </Card>
 
-      <div class="rounded-2xl border border-dashed border-border/90 bg-surface/40 px-5 py-4 text-sm leading-relaxed text-muted">
+      <div className="rounded-2xl border border-dashed border-border/90 bg-surface/40 px-5 py-4 text-sm leading-relaxed text-muted">
         <p>测速网关请在「测速」页单独配置；日报偏好在「日报」页。</p>
-        <p class="mt-1.5">
-          AI 配置供 <span class="text-foreground">tkt gc</span> /{' '}
-          <span class="text-foreground">report</span> /{' '}
-          <span class="text-foreground">agent</span> 使用；也可用{' '}
-          <span class="text-foreground">tkt config</span>。
+        <p className="mt-1.5">
+          AI 配置供 <span className="text-foreground">tkt gc</span> /{' '}
+          <span className="text-foreground">report</span> /{' '}
+          <span className="text-foreground">agent</span> 使用；也可用{' '}
+          <span className="text-foreground">tkt config</span>。
         </p>
       </div>
     </div>

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'preact/hooks'
-import { route } from 'preact-router'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@web/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@web/components/ui/card'
 import { Checkbox } from '@web/components/ui/checkbox'
@@ -9,7 +9,8 @@ import { fetchJson } from '@web/lib/api'
 import { ReportLayout } from '@web/pages/report/layout'
 import type { ReportSettingView, RepoRow } from '@web/pages/report/types'
 
-export function ReportGeneratePage(_props: { path?: string }) {
+export function ReportGeneratePage() {
+  const navigate = useNavigate()
   const [repos, setRepos] = useState<RepoRow[]>([])
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [extraPath, setExtraPath] = useState('')
@@ -59,7 +60,7 @@ export function ReportGeneratePage(_props: { path?: string }) {
       setMsg(
         `完成 · ${data.gather?.repos ?? 0} 仓 · ${data.gather?.commitCount ?? 0} commits`,
       )
-      route(`/report/history/${data.record.date}`)
+      navigate(`/report/history/${data.record.date}`)
     } catch (e) {
       setOk(false)
       setMsg(e instanceof Error ? e.message : String(e))
@@ -74,7 +75,7 @@ export function ReportGeneratePage(_props: { path?: string }) {
         <CardHeader>
           <div>
             <CardTitle>生成今日日报</CardTitle>
-            <p class="mt-1 text-sm font-normal text-muted">
+            <p className="mt-1 text-sm font-normal text-muted">
               只扫名单里已有仓库，或粘贴本地路径；不自动搜 cwd。
             </p>
           </div>
@@ -84,23 +85,23 @@ export function ReportGeneratePage(_props: { path?: string }) {
         </CardHeader>
 
         {repos.length ? (
-          <div class="mb-4 grid max-h-56 grid-cols-1 gap-1.5 overflow-auto sm:grid-cols-2">
+          <div className="mb-4 grid max-h-56 grid-cols-1 gap-1.5 overflow-auto sm:grid-cols-2">
             {repos.map((r) => (
               <label
                 key={r.path}
-                class="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-surface/80"
+                className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-surface/80"
               >
                 <Checkbox
-                  class="mt-0.5"
+                  className="mt-0.5"
                   checked={!!selected[r.path]}
                   onChange={(e) => {
                     const on = (e.target as HTMLInputElement).checked
                     setSelected((s) => ({ ...s, [r.path]: on }))
                   }}
                 />
-                <span class="min-w-0">
-                  <span class="font-medium">{r.display_name || r.alias}</span>
-                  <span class="mt-0.5 block truncate font-mono text-[11px] text-muted">
+                <span className="min-w-0">
+                  <span className="font-medium">{r.display_name || r.alias}</span>
+                  <span className="mt-0.5 block truncate font-mono text-[11px] text-muted">
                     {r.path}
                   </span>
                 </span>
@@ -108,11 +109,11 @@ export function ReportGeneratePage(_props: { path?: string }) {
             ))}
           </div>
         ) : (
-          <p class="mb-3 text-sm text-muted">名单为空时，请在下方输入仓库路径，或先去「名单」添加。</p>
+          <p className="mb-3 text-sm text-muted">名单为空时，请在下方输入仓库路径，或先去「名单」添加。</p>
         )}
 
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div class="space-y-1.5">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
             <Label>额外路径</Label>
             <Input
               value={extraPath}
@@ -120,7 +121,7 @@ export function ReportGeneratePage(_props: { path?: string }) {
               onInput={(e) => setExtraPath((e.target as HTMLInputElement).value)}
             />
           </div>
-          <div class="space-y-1.5">
+          <div className="space-y-1.5">
             <Label>附带杂事</Label>
             <Input
               value={append}
@@ -131,7 +132,7 @@ export function ReportGeneratePage(_props: { path?: string }) {
         </div>
 
         {msg ? (
-          <p class={`mt-4 text-sm ${ok ? 'text-success' : busy ? 'text-muted' : 'text-destructive'}`}>
+          <p className={`mt-4 text-sm ${ok ? 'text-success' : busy ? 'text-muted' : 'text-destructive'}`}>
             {msg}
           </p>
         ) : null}

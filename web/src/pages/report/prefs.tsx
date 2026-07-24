@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useState } from 'react'
 import { Button } from '@web/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@web/components/ui/card'
 import { Checkbox } from '@web/components/ui/checkbox'
@@ -29,7 +29,7 @@ function cloneSchedule(s: WorkScheduleView): WorkScheduleView {
   return structuredClone(s)
 }
 
-export function ReportPrefsPage(_props: { path?: string }) {
+export function ReportPrefsPage() {
   const [setting, setSetting] = useState<ReportSettingView | null>(null)
   const [role, setRole] = useState('')
   const [autoCopy, setAutoCopy] = useState(true)
@@ -100,11 +100,11 @@ export function ReportPrefsPage(_props: { path?: string }) {
             保存
           </Button>
         </CardHeader>
-        <div class="grid gap-4 sm:grid-cols-2">
-          <div class="space-y-1.5">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
             <Label>角色</Label>
             <select
-              class="h-10 w-full rounded-md border border-border bg-white px-3 text-sm"
+              className="h-10 w-full rounded-md border border-border bg-white px-3 text-sm"
               value={role}
               onChange={(e) => setRole((e.target as HTMLSelectElement).value)}
             >
@@ -116,35 +116,35 @@ export function ReportPrefsPage(_props: { path?: string }) {
               ))}
             </select>
           </div>
-          <div class="space-y-1.5">
+          <div className="space-y-1.5">
             <Label>Git 邮箱</Label>
             <Input value={setting?.git_user_email || ''} disabled />
           </div>
         </div>
 
-        <div class="mt-6 space-y-2">
+        <div className="mt-6 space-y-2">
           <div>
             <Label>工时偏好（按星期）</Label>
-            <p class="mt-1 text-xs text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               默认：周一–周四 09:00→21:00；周五/周六 →18:30；周日不选。生成日报时按当日星期取窗。
             </p>
           </div>
-          <div class="overflow-x-auto rounded-md border border-border">
-            <table class="w-full min-w-[28rem] text-sm">
+          <div className="overflow-x-auto rounded-md border border-border">
+            <table className="w-full min-w-[28rem] text-sm">
               <thead>
-                <tr class="border-b border-border bg-surface/60 text-left text-muted-foreground">
-                  <th class="px-3 py-2 font-medium">工作日</th>
-                  <th class="px-3 py-2 font-medium">上班</th>
-                  <th class="px-3 py-2 font-medium">下班</th>
+                <tr className="border-b border-border bg-surface/60 text-left text-muted-foreground">
+                  <th className="px-3 py-2 font-medium">工作日</th>
+                  <th className="px-3 py-2 font-medium">上班</th>
+                  <th className="px-3 py-2 font-medium">下班</th>
                 </tr>
               </thead>
               <tbody>
                 {WEEKDAY_KEYS.map((key) => {
                   const row = schedule[key]
                   return (
-                    <tr key={key} class="border-b border-border/70 last:border-0">
-                      <td class="px-3 py-2">
-                        <label class="flex items-center gap-2">
+                    <tr key={key} className="border-b border-border/70 last:border-0">
+                      <td className="px-3 py-2">
+                        <label className="flex items-center gap-2">
                           <Checkbox
                             checked={row.enabled}
                             onChange={(e) =>
@@ -153,14 +153,14 @@ export function ReportPrefsPage(_props: { path?: string }) {
                               })
                             }
                           />
-                          <span class={row.enabled ? '' : 'text-muted-foreground'}>
+                          <span className={row.enabled ? '' : 'text-muted-foreground'}>
                             {WEEKDAY_LABELS[key]}
                           </span>
                         </label>
                       </td>
-                      <td class="px-3 py-2">
+                      <td className="px-3 py-2">
                         <Input
-                          class="h-9"
+                          className="h-9"
                           type="time"
                           value={row.start}
                           onInput={(e) =>
@@ -168,9 +168,9 @@ export function ReportPrefsPage(_props: { path?: string }) {
                           }
                         />
                       </td>
-                      <td class="px-3 py-2">
+                      <td className="px-3 py-2">
                         <Input
-                          class="h-9"
+                          className="h-9"
                           type="time"
                           value={row.end}
                           onInput={(e) =>
@@ -186,15 +186,15 @@ export function ReportPrefsPage(_props: { path?: string }) {
           </div>
         </div>
 
-        <div class="mt-4 flex flex-wrap gap-5">
-          <label class="flex items-center gap-2 text-sm">
+        <div className="mt-4 flex flex-wrap gap-5">
+          <label className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={autoCopy}
               onChange={(e) => setAutoCopy((e.target as HTMLInputElement).checked)}
             />
             CLI 生成后自动复制
           </label>
-          <label class="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={showRoster}
               onChange={(e) => setShowRoster((e.target as HTMLInputElement).checked)}
@@ -202,7 +202,7 @@ export function ReportPrefsPage(_props: { path?: string }) {
             CLI 启动显示名单
           </label>
         </div>
-        <p class={`mt-3 text-sm ${ok ? 'text-success' : 'text-destructive'}`}>{msg}</p>
+        <p className={`mt-3 text-sm ${ok ? 'text-success' : 'text-destructive'}`}>{msg}</p>
       </Card>
     </ReportLayout>
   )

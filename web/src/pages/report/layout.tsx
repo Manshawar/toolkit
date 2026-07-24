@@ -1,27 +1,30 @@
-import { route } from 'preact-router'
-import { type ComponentChildren } from 'preact'
+import type { ReactNode } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { cn } from '@web/lib/utils'
 import { REPORT_NAV } from '@web/pages/report/types'
 
 export function ReportLayout({
-  path,
+  path: pathProp,
   children,
 }: {
-  path: string
-  children?: ComponentChildren
+  path?: string
+  children?: ReactNode
 }) {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const path = pathProp ?? location.pathname
   return (
-    <div class="space-y-6">
-      <header class="space-y-3">
+    <div className="space-y-6">
+      <header className="space-y-3">
         <div>
-          <h1 class="font-display text-2xl font-bold tracking-tight sm:text-[1.75rem]">
+          <h1 className="font-display text-2xl font-bold tracking-tight sm:text-[1.75rem]">
             日报
           </h1>
-          <p class="mt-1 max-w-xl text-sm text-muted">
+          <p className="mt-1 max-w-xl text-sm text-muted">
             查改归档、管名单与偏好。生成在「生成」页。
           </p>
         </div>
-        <nav class="flex flex-wrap gap-1 rounded-xl border border-border/80 bg-card/80 p-1">
+        <nav className="flex flex-wrap gap-1 rounded-xl border border-border/80 bg-card/80 p-1">
           {REPORT_NAV.map((item) => {
             const active = item.exact
               ? path === item.href
@@ -32,9 +35,9 @@ export function ReportLayout({
                 href={item.href}
                 onClick={(e) => {
                   e.preventDefault()
-                  route(item.href)
+                  navigate(item.href)
                 }}
-                class={cn(
+                className={cn(
                   'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
                   active
                     ? 'bg-primary text-primary-foreground'

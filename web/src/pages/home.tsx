@@ -1,6 +1,6 @@
-import { route } from 'preact-router'
+import { useNavigate } from 'react-router-dom'
 
-/** 功能型能力：首页卡片 + 头部「工具」菜单 */
+/** 功能型能力：首页卡片；选中后左上角图钉球切换子路由 */
 export const FEATURE_ROUTES = [
   {
     href: '/report',
@@ -39,49 +39,50 @@ export const CONFIG_ROUTES = [
 /** @deprecated 兼容旧 import；请用 FEATURE_ROUTES / CONFIG_ROUTES */
 export const ROUTES = [...FEATURE_ROUTES, ...CONFIG_ROUTES]
 
-export function HomePage(_props: { path?: string }) {
+export function HomePage() {
+  const navigate = useNavigate()
   return (
-    <div class="space-y-14">
-      <section class="animate-rise max-w-2xl pt-2">
-        <p class="font-display text-[clamp(3.2rem,10vw,5.2rem)] font-extrabold leading-[0.95] tracking-tight text-foreground">
+    <div className="space-y-14">
+      <section className="animate-rise max-w-2xl pt-2">
+        <p className="font-display text-[clamp(3.2rem,10vw,5.2rem)] font-extrabold leading-[0.95] tracking-tight text-foreground">
           tkt
         </p>
-        <h1 class="mt-5 text-[1.35rem] font-semibold tracking-tight text-foreground sm:text-[1.55rem]">
+        <h1 className="mt-5 text-[1.35rem] font-semibold tracking-tight text-foreground sm:text-[1.55rem]">
           本机工具，少打扰
         </h1>
-        <p class="mt-3 max-w-md text-[0.95rem] leading-relaxed text-muted">
+        <p className="mt-3 max-w-md text-[0.95rem] leading-relaxed text-muted">
           日报、用量、测速都在工具里；AI 网关等通用配置在设置。
         </p>
       </section>
 
-      <section class="space-y-4">
-        <h2 class="text-xs font-medium uppercase tracking-[0.14em] text-primary/70">
+      <section className="space-y-4">
+        <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-primary/70">
           工具
         </h2>
-        <div class="animate-rise-delay-1 grid gap-4 sm:grid-cols-2">
+        <div className="animate-rise-delay-1 grid gap-4 sm:grid-cols-2">
           {FEATURE_ROUTES.map((item, i) => (
             <a
               key={item.href}
               href={item.href}
               onClick={(e) => {
                 e.preventDefault()
-                route(item.href)
+                navigate(item.href)
               }}
-              class={cnEntry(i)}
+              className={cnEntry(i)}
             >
-              <div class="flex items-start justify-between gap-3">
-                <h2 class="font-display text-xl font-bold tracking-tight">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="font-display text-xl font-bold tracking-tight">
                   {item.title}
                 </h2>
                 <span
-                  class="mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:translate-x-0.5"
+                  className="mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary transition-transform duration-300 group-hover:translate-x-0.5"
                   aria-hidden
                 >
                   →
                 </span>
               </div>
-              <p class="mt-3 text-sm leading-relaxed text-muted">{item.desc}</p>
-              <p class="mt-6 text-xs font-medium uppercase tracking-[0.14em] text-primary/70">
+              <p className="mt-3 text-sm leading-relaxed text-muted">{item.desc}</p>
+              <p className="mt-6 text-xs font-medium uppercase tracking-[0.14em] text-primary/70">
                 {item.hint}
               </p>
             </a>
@@ -89,23 +90,23 @@ export function HomePage(_props: { path?: string }) {
         </div>
       </section>
 
-      <section class="space-y-3">
-        <h2 class="text-xs font-medium uppercase tracking-[0.14em] text-muted">
+      <section className="space-y-3">
+        <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-muted">
           配置
         </h2>
-        <div class="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           {CONFIG_ROUTES.map((item) => (
             <a
               key={item.href}
               href={item.href}
               onClick={(e) => {
                 e.preventDefault()
-                route(item.href)
+                navigate(item.href)
               }}
-              class="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-card/70 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/35 hover:bg-card"
+              className="inline-flex items-center gap-2 rounded-xl border border-border/80 bg-card/70 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/35 hover:bg-card"
             >
               {item.title}
-              <span class="text-muted" aria-hidden>
+              <span className="text-muted" aria-hidden>
                 →
               </span>
             </a>

@@ -1,5 +1,4 @@
-import Router from 'preact-router'
-import { useState } from 'preact/hooks'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Shell } from '@web/components/shell'
 import { BenchPage } from '@web/pages/bench'
 import { HomePage } from '@web/pages/home'
@@ -13,22 +12,23 @@ import { SettingPage } from '@web/pages/setting'
 import { UsagePage } from '@web/pages/usage'
 
 export function App() {
-  const [path, setPath] = useState(typeof location !== 'undefined' ? location.pathname : '/')
-
   return (
-    <Shell path={path}>
-      <Router onChange={(e) => setPath(e.url.split('?')[0] || '/')}>
-        <HomePage path="/" />
-        <ReportOverviewPage path="/report" />
-        <ReportGeneratePage path="/report/generate" />
-        <ReportHistoryListPage path="/report/history" />
-        <ReportHistoryEditPage path="/report/history/:date" />
-        <ReportRosterPage path="/report/roster" />
-        <ReportPrefsPage path="/report/prefs" />
-        <UsagePage path="/usage" />
-        <BenchPage path="/bench" />
-        <SettingPage path="/setting" />
-      </Router>
-    </Shell>
+    <BrowserRouter>
+      <Shell>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/report" element={<ReportOverviewPage />} />
+          <Route path="/report/generate" element={<ReportGeneratePage />} />
+          <Route path="/report/history" element={<ReportHistoryListPage />} />
+          <Route path="/report/history/:date" element={<ReportHistoryEditPage />} />
+          <Route path="/report/roster" element={<ReportRosterPage />} />
+          <Route path="/report/prefs" element={<ReportPrefsPage />} />
+          <Route path="/usage" element={<UsagePage />} />
+          <Route path="/bench" element={<BenchPage />} />
+          <Route path="/setting" element={<SettingPage />} />
+          <Route path="*" element={<HomePage />} />
+        </Routes>
+      </Shell>
+    </BrowserRouter>
   )
 }

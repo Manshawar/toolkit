@@ -31,8 +31,8 @@ export function PieChart({
   })
 
   return (
-    <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} class="shrink-0">
+    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
         {paths.length === 1 ? (
           <circle
             cx={size / 2}
@@ -55,21 +55,21 @@ export function PieChart({
           y="50%"
           textAnchor="middle"
           dominantBaseline="central"
-          class="fill-foreground"
+          className="fill-foreground"
           style={{ fontSize: 14, fontWeight: 700 }}
         >
           {Math.round(total * 10) / 10}h
         </text>
       </svg>
-      <ul class="w-full space-y-2 text-sm">
+      <ul className="w-full space-y-2 text-sm">
         {paths.map((p) => (
-          <li key={p.name} class="flex items-center gap-2">
+          <li key={p.name} className="flex items-center gap-2">
             <span
-              class="size-2.5 shrink-0 rounded-full"
+              className="size-2.5 shrink-0 rounded-full"
               style={{ background: p.color }}
             />
-            <span class="min-w-0 flex-1 truncate">{p.name}</span>
-            <span class="tabular-nums text-muted">
+            <span className="min-w-0 flex-1 truncate">{p.name}</span>
+            <span className="tabular-nums text-muted">
               {p.value}h · {p.pct}%
             </span>
           </li>

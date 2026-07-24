@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useState } from 'react'
 import { Button } from '@web/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@web/components/ui/card'
 import { Badge } from '@web/components/ui/badge'
@@ -88,7 +88,7 @@ function barTone(pct: number) {
   return 'bg-destructive'
 }
 
-export function UsagePage(_props: { path?: string }) {
+export function UsagePage() {
   const [period, setPeriod] = useState<UsagePeriod>('day')
   const [agent, setAgent] = useState<AgentUsageStats | null>(null)
   const [agentMsg, setAgentMsg] = useState('')
@@ -145,30 +145,30 @@ export function UsagePage(_props: { path?: string }) {
   const maxToolTokens = Math.max(1, ...(agent?.tools.map((t) => t.totalTokens) || [1]))
 
   return (
-    <div class="mx-auto max-w-2xl space-y-10">
-      <header class="space-y-1">
-        <h1 class="font-display text-2xl font-bold tracking-tight">用量</h1>
-        <p class="text-sm text-muted">本地 Agent 各工具消耗，以及云端 Token Plan 配额。</p>
+    <div className="mx-auto max-w-2xl space-y-10">
+      <header className="space-y-1">
+        <h1 className="font-display text-2xl font-bold tracking-tight">用量</h1>
+        <p className="text-sm text-muted">本地 Agent 各工具消耗，以及云端 Token Plan 配额。</p>
       </header>
 
-      <section class="space-y-4">
-        <div class="flex flex-wrap items-end justify-between gap-3">
+      <section className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 class="font-display text-lg font-bold tracking-tight">Agent 用量</h2>
-            <p class="mt-0.5 text-xs text-muted">
+            <h2 className="font-display text-lg font-bold tracking-tight">Agent 用量</h2>
+            <p className="mt-0.5 text-xs text-muted">
               {agent
                 ? `${new Date(agent.from).toLocaleString('zh-CN')} — ${new Date(agent.to).toLocaleString('zh-CN')}`
                 : '按本地时区统计'}
             </p>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <nav class="flex gap-0.5 rounded-xl border border-border/80 bg-card/80 p-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <nav className="flex gap-0.5 rounded-xl border border-border/80 bg-card/80 p-1">
               {PERIODS.map((p) => (
                 <button
                   key={p.id}
                   type="button"
                   onClick={() => setPeriod(p.id)}
-                  class={cn(
+                  className={cn(
                     'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
                     period === p.id
                       ? 'bg-primary text-primary-foreground'
@@ -190,11 +190,11 @@ export function UsagePage(_props: { path?: string }) {
           </div>
         </div>
 
-        {agentMsg ? <p class="text-sm text-destructive">{agentMsg}</p> : null}
+        {agentMsg ? <p className="text-sm text-destructive">{agentMsg}</p> : null}
 
         {agent ? (
           <>
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat label="调用" value={String(agent.calls)} />
               <Stat label="合计 Token" value={formatTokens(agent.totalTokens)} />
               <Stat label="输入" value={formatTokens(agent.inputTokens)} />
@@ -202,7 +202,7 @@ export function UsagePage(_props: { path?: string }) {
             </div>
 
             {agent.tools.length ? (
-              <ul class="space-y-3">
+              <ul className="space-y-3">
                 {agent.tools.map((t) => (
                   <li key={t.tool}>
                     <Card>
@@ -210,15 +210,15 @@ export function UsagePage(_props: { path?: string }) {
                         <CardTitle>{t.label}</CardTitle>
                         <Badge>{t.calls} 次</Badge>
                       </CardHeader>
-                      <div class="mb-2 h-2 overflow-hidden rounded-full bg-surface">
+                      <div className="mb-2 h-2 overflow-hidden rounded-full bg-surface">
                         <div
-                          class="h-full rounded-full bg-primary transition-all"
+                          className="h-full rounded-full bg-primary transition-all"
                           style={{
                             width: `${Math.max(4, (t.totalTokens / maxToolTokens) * 100)}%`,
                           }}
                         />
                       </div>
-                      <p class="text-xs text-muted">
+                      <p className="text-xs text-muted">
                         合计 {formatTokens(t.totalTokens)} · 入{' '}
                         {formatTokens(t.inputTokens)} · 出 {formatTokens(t.outputTokens)}
                       </p>
@@ -227,22 +227,22 @@ export function UsagePage(_props: { path?: string }) {
                 ))}
               </ul>
             ) : (
-              <p class="rounded-xl border border-dashed border-border/80 bg-card/40 px-4 py-8 text-center text-sm text-muted">
-                本时段暂无 Agent 调用记录。跑一次 <code class="text-foreground">tkt gc</code> 或{' '}
-                <code class="text-foreground">tkt report</code> 后会记在这里。
+              <p className="rounded-xl border border-dashed border-border/80 bg-card/40 px-4 py-8 text-center text-sm text-muted">
+                本时段暂无 Agent 调用记录。跑一次 <code className="text-foreground">tkt gc</code> 或{' '}
+                <code className="text-foreground">tkt report</code> 后会记在这里。
               </p>
             )}
           </>
         ) : !agentMsg ? (
-          <p class="text-sm text-muted">加载中…</p>
+          <p className="text-sm text-muted">加载中…</p>
         ) : null}
       </section>
 
-      <section class="space-y-4 border-t border-border/60 pt-8">
-        <div class="flex flex-wrap items-end justify-between gap-3">
+      <section className="space-y-4 border-t border-border/60 pt-8">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 class="font-display text-lg font-bold tracking-tight">Token Plan</h2>
-            <p class="mt-0.5 text-xs text-muted">
+            <h2 className="font-display text-lg font-bold tracking-tight">Token Plan</h2>
+            <p className="mt-0.5 text-xs text-muted">
               {health?.provider || 'minimax'}
               {snap ? ` · 拉取于 ${new Date(snap.fetchedAt).toLocaleString('zh-CN')}` : ''}
             </p>
@@ -258,35 +258,35 @@ export function UsagePage(_props: { path?: string }) {
         </div>
 
         {planMsg ? (
-          <p class={`text-sm ${snap ? 'text-muted' : 'text-destructive'}`}>{planMsg}</p>
+          <p className={`text-sm ${snap ? 'text-muted' : 'text-destructive'}`}>{planMsg}</p>
         ) : null}
 
         {snap ? (
-          <div class="space-y-4">
+          <div className="space-y-4">
             {snap.models.map((m) => (
               <Card key={m.name}>
                 <CardHeader>
                   <CardTitle>{m.name}</CardTitle>
                   {m.meta?.boost ? <Badge>{m.meta.boost}</Badge> : null}
                 </CardHeader>
-                <ul class="space-y-4">
+                <ul className="space-y-4">
                   {m.windows.map((w) => (
                     <li key={w.label}>
-                      <div class="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
-                        <span class="font-medium">{w.label}</span>
-                        <span class="tabular-nums text-muted">
+                      <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
+                        <span className="font-medium">{w.label}</span>
+                        <span className="tabular-nums text-muted">
                           {Math.round(w.remainingPercent)}% 剩余
                         </span>
                       </div>
-                      <div class="h-2.5 overflow-hidden rounded-full bg-surface">
+                      <div className="h-2.5 overflow-hidden rounded-full bg-surface">
                         <div
-                          class={`h-full rounded-full transition-all ${barTone(w.remainingPercent)}`}
+                          className={`h-full rounded-full transition-all ${barTone(w.remainingPercent)}`}
                           style={{
                             width: `${Math.max(0, Math.min(100, w.remainingPercent))}%`,
                           }}
                         />
                       </div>
-                      <p class="mt-1.5 text-xs text-muted">
+                      <p className="mt-1.5 text-xs text-muted">
                         {[
                           w.remainsMs != null ? `还剩 ${formatDuration(w.remainsMs)}` : null,
                           w.resetAt
@@ -306,7 +306,7 @@ export function UsagePage(_props: { path?: string }) {
             ))}
           </div>
         ) : !planMsg ? (
-          <p class="text-sm text-muted">加载中…</p>
+          <p className="text-sm text-muted">加载中…</p>
         ) : null}
       </section>
     </div>
@@ -315,9 +315,9 @@ export function UsagePage(_props: { path?: string }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div class="rounded-xl border border-border/80 bg-card/80 px-3 py-3">
-      <p class="text-[11px] font-medium uppercase tracking-[0.08em] text-muted">{label}</p>
-      <p class="mt-1 font-display text-xl font-bold tabular-nums tracking-tight">{value}</p>
+    <div className="rounded-xl border border-border/80 bg-card/80 px-3 py-3">
+      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted">{label}</p>
+      <p className="mt-1 font-display text-xl font-bold tabular-nums tracking-tight">{value}</p>
     </div>
   )
 }

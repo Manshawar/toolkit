@@ -15,7 +15,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "preact",
     "baseUrl": ".",
     "paths": {
       "@web/*": ["./src/*"]

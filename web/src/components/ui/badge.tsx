@@ -1,4 +1,4 @@
-import { type ComponentChildren } from 'preact'
+import type { ReactNode } from 'react'
 import { cn } from '@web/lib/utils'
 
 export function Badge({
@@ -6,11 +6,11 @@ export function Badge({
   children,
 }: {
   className?: string
-  children?: ComponentChildren
+  children?: ReactNode
 }) {
   return (
     <span
-      class={cn(
+      className={cn(
         'ml-2 inline-flex items-center rounded-md bg-accent px-1.5 py-0.5 text-[11px] font-semibold text-primary',
         className,
       )}

@@ -1,4 +1,4 @@
-import { type ComponentChildren } from 'preact'
+import type { ReactNode } from 'react'
 import { cn } from '@web/lib/utils'
 
 export function Card({
@@ -6,11 +6,11 @@ export function Card({
   children,
 }: {
   className?: string
-  children?: ComponentChildren
+  children?: ReactNode
 }) {
   return (
     <section
-      class={cn(
+      className={cn(
         'rounded-2xl border border-border/80 bg-card/90 p-5 shadow-[0_1px_0_rgba(18,21,26,0.04)] backdrop-blur-sm sm:p-6',
         className,
       )}
@@ -25,24 +25,24 @@ export function CardHeader({
   children,
 }: {
   className?: string
-  children?: ComponentChildren
+  children?: ReactNode
 }) {
   return (
-    <div class={cn('mb-4 flex flex-wrap items-center gap-3', className)}>
+    <div className={cn('mb-4 flex flex-wrap items-center gap-3', className)}>
       {children}
     </div>
   )
 }
 
 export function CardTitle({
-  class: className,
+  className,
   children,
 }: {
-  class?: string
-  children?: ComponentChildren
+  className?: string
+  children?: ReactNode
 }) {
   return (
-    <h2 class={cn('font-display text-base font-bold tracking-tight', className)}>
+    <h2 className={cn('font-display text-base font-bold tracking-tight', className)}>
       {children}
     </h2>
   )
