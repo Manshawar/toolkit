@@ -81,12 +81,14 @@ async function main() {
     .description('本地工具台导航页（Hono 单端口 SPA）')
     .option('--port <n>', '端口', String(DEFAULT_PORT))
     .option('--no-open', '不自动打开浏览器')
+    .option('--no-spa', '仅 API：不挂载 SPA（前端由 Vite 接管）')
     .option('--path <route>', '打开指定路由，如 /report', '/')
     .action((opts) => {
       startUiServer({
         port: parseInt(String(opts.port), 10) || DEFAULT_PORT,
         path: typeof opts.path === 'string' ? opts.path : '/',
         open: opts.open !== false,
+        noSpa: opts.spa === false,
       })
     })
 

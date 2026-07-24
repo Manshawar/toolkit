@@ -29,10 +29,10 @@ const mounts: FeatureMount[] = [
   mountUsageRoutes,
 ]
 
-export function createApp(): Hono {
+export function createApp({ mountSpa: mountSpaOpt = true }: { mountSpa?: boolean } = {}): Hono {
   const app = new Hono()
   for (const mount of mounts) mount(app)
-  mountSpa(app)
+  if (mountSpaOpt) mountSpa(app)
   return app
 }
 
@@ -77,16 +77,19 @@ export function startUiServer({
   port: preferredPort = DEFAULT_PORT,
   path: openPath = '/',
   open = true,
+  noSpa = false,
 }: {
   port?: number
   /** SPA 路由，如 /report、/bench、/setting、/usage */
   path?: string
   /** 是否自动打开浏览器，默认 true */
   open?: boolean
+  /** 仅当 API：跳过 mountSpa（前端交给 Vite） */
+  noSpa?: boolean
 } = {}): void {
   watch.bootstrap()
   const env = readEnv()
-  const app = createApp()
+  const app = createApp({ mountSpa: !noSpa })
   const route = normalizePath(openPath)
 
   void (async () => {
@@ -106,6 +109,9 @@ export function startUiServer({
       const base = `http://127.0.0.1:${info.port}`
       const url = route === '/' ? `${base}/` : `${base}${route}`
       console.log(`tkt ui → ${url}`)
+      if (noSpa) {
+        console.log('SPA: OFF（前端由 Vite 接管；/api/* 仍可访问）')
+      }
       if (open) openBrowser(url)
       if (env.missing.length) {
         console.log(`WARN: 未配置测速网关 — /bench 填写 URL/Key，将写入 ${gatewayConfigPath()}`)
@@ -140,11 +146,13 @@ export function registerUiSubcommand(
     .description(description)
     .option('--port <n>', '端口', String(DEFAULT_PORT))
     .option('--no-open', '不自动打开浏览器')
-    .action((opts: { port?: string; open?: boolean }) => {
+    .option('--no-spa', '仅 API：不挂载 SPA（前端由 Vite 接管）')
+    .action((opts: { port?: string; open?: boolean; spa?: boolean }) => {
       startUiServer({
         port: parseInt(String(opts.port), 10) || DEFAULT_PORT,
         path: routePath,
         open: opts.open !== false,
+        noSpa: opts.spa === false,
       })
     })
 }
