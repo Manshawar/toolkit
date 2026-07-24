@@ -54,12 +54,7 @@ export const stepCommit: Step = async (ctx) => {
     }
 
     const leftover = await listPendingPaths(ctx.cwd)
-    if (leftover.length > 0 && !quiet) {
-      console.log(chalk.yellow(`  ⚠ 仍有 ${leftover.length} 个文件未纳入本次 plan`))
-      for (const p of leftover.slice(0, 12)) console.log(chalk.dim(`    · ${p}`))
-      if (leftover.length > 12) console.log(chalk.dim(`    · … +${leftover.length - 12}`))
-    }
-
+    // 日志交给 CLI / agent-loop，避免双打
     return { ...ctx, commitHashes: hashes, leftover }
   } catch (e) {
     if (spin.status === 'running') {

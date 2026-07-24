@@ -58,9 +58,6 @@ export interface AgentClient {
   getModel(): Promise<LanguageModel>
 }
 
-/** @deprecated 用 AgentClient */
-export type AiClient = AgentClient
-
 /** 从模型原文里抠出可 JSON.parse 的对象文本 */
 function extractJsonObject(text: string): string | null {
   let t = text.trim()
@@ -211,6 +208,3 @@ export async function createAgentClient(config?: AiConfig): Promise<AgentClient>
     },
   }
 }
-
-/** @deprecated 用 createAgentClient */
-export const createAiClient = createAgentClient

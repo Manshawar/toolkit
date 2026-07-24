@@ -1,11 +1,9 @@
 /**
- * git-submit 入口：`tkt gc` → AI SDK 生成 Plan → commit（可选 push）
+ * git-submit 入口：`tkt gc` → 单次 Plan → commit（可选 push）
  */
-import chalk from 'chalk'
 import { Command, Option } from 'commander'
-import { emitCliError, emitJson, GitSubmitResultSchema } from '@/core/cli'
 import { printAutoPushStatus, resolveAutoPush } from './prefs'
-import { GitSubmitError } from './errors'
+import { emitGcError, emitGcOutcome } from './cli'
 import { runWorkflow } from './run'
 import type { GitSubmitOptions } from './types'
 
@@ -14,49 +12,14 @@ export { CommitPlanSchema } from './types'
 export { createContext, runOnce, runWorkflow } from './run'
 export { GitSubmitError } from './errors'
 export { runAgentGc, AGENT_GC_MAX_ROUNDS, type AgentGcOptions } from './agent-loop'
+export { emitGcOutcome, emitGcError, logLeftoverPaths } from './cli'
 
 export async function runGitSubmit(options: GitSubmitOptions): Promise<void> {
   try {
     const ctx = await runWorkflow(options)
-
-    const commits = (ctx.commitPlan?.commits ?? []).map((c, i) => ({
-      message: c.message,
-      hash: ctx.commitHashes?.[i] ?? '',
-    }))
-    const pushed = Boolean(ctx.pushed)
-
-    if (options.json) {
-      emitJson(GitSubmitResultSchema, {
-        ok: true as const,
-        commits,
-        pushed,
-        gerrit: ctx.isGerrit,
-      })
-      return
-    }
-
-    if (options.dryRun) {
-      console.log(chalk.yellow('dry-run 完成'))
-      return
-    }
-    console.log(
-      chalk.green(
-        `完成：${commits.length} 个 commit${
-          pushed ? (ctx.isGerrit ? ' + gerrit + push' : ' + push') : ''
-        }`,
-      ),
-    )
+    emitGcOutcome(ctx, options, 'gc')
   } catch (e) {
-    if (e instanceof GitSubmitError && e.code === 'CLEAN') {
-      if (options.json) emitCliError({ ok: false, code: 'CLEAN', message: e.message })
-      else console.log(chalk.dim(e.message))
-      return
-    }
-    const msg = e instanceof Error ? e.message : String(e)
-    const code = e instanceof GitSubmitError ? e.code : 'GIT_SUBMIT'
-    if (options.json) emitCliError({ ok: false, code, message: msg })
-    else console.error(chalk.red(msg))
-    process.exitCode = 1
+    emitGcError(e, options)
   }
 }
 

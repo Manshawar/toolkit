@@ -4,7 +4,7 @@
  *
  * ```
  * src/
- *   agent/              Vercel AI SDK + 工作流 loop
+ *   agent/              Vercel AI SDK + config
  *   core/               paths / env / git / cli
  *   server/             Hono 单端口 UI
  *   ui/                 CLI spinner

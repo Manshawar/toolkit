@@ -1,17 +1,15 @@
 /**
- * 本地 Agent 层（原 `src/ai`）
+ * 本地 Agent 层
  *
  * - client：Vercel AI SDK（tool loop = `stopWhen` / stepCountIs）
  * - config：URL / Key / Model 拦截
- * - loop：通用工作流重试原语（领域 loop 放各 feature，如 git-submit/agent-loop）
+ * - loop：通用 `runLoop`（CLI / feature 工作流「再跑直到完成」）
  */
 export {
   createAgentClient,
-  createAiClient,
   normalizeOpenAiBaseUrl,
   supportsStructuredOutputs,
   type AgentClient,
-  type AiClient,
   type AiConfig,
   type GenerateObjectOptions,
   interceptAiConfig,
@@ -24,4 +22,9 @@ export {
   recoverAiConfig,
 } from './client'
 
-export { agentLoop } from './loop'
+export {
+  runLoop,
+  DEFAULT_LOOP_MAX,
+  type RunLoopOptions,
+  type LoopErrorAction,
+} from './loop'
