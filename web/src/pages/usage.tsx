@@ -1,9 +1,31 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import { Button } from '@web/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@web/components/ui/card'
 import { Badge } from '@web/components/ui/badge'
-import { Input } from '@web/components/ui/input'
+import { cn } from '@web/lib/utils'
 import { fetchJson } from '@web/lib/api'
+
+type UsagePeriod = 'day' | 'week' | 'month' | 'year'
+
+type ToolUsageRow = {
+  tool: string
+  label: string
+  calls: number
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+}
+
+type AgentUsageStats = {
+  period: UsagePeriod
+  from: string
+  to: string
+  calls: number
+  inputTokens: number
+  outputTokens: number
+  totalTokens: number
+  tools: ToolUsageRow[]
+}
 
 type QuotaWindow = {
   label: string
@@ -34,23 +56,17 @@ type Health = {
   hint?: string
 }
 
-const STORAGE_KEY = 'tkt.usage.refreshSec'
-const MIN_SEC = 5
-const DEFAULT_SEC = 30
+const PERIODS: { id: UsagePeriod; label: string }[] = [
+  { id: 'day', label: '日' },
+  { id: 'week', label: '周' },
+  { id: 'month', label: '月' },
+  { id: 'year', label: '年' },
+]
 
-function readIntervalSec(): number {
-  try {
-    const n = Number(localStorage.getItem(STORAGE_KEY))
-    if (Number.isFinite(n) && n >= MIN_SEC) return Math.floor(n)
-  } catch {
-    /* ignore */
-  }
-  return DEFAULT_SEC
-}
-
-function clampIntervalSec(raw: number): number {
-  if (!Number.isFinite(raw)) return DEFAULT_SEC
-  return Math.max(MIN_SEC, Math.floor(raw))
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 10_000) return `${(n / 1000).toFixed(1)}k`
+  return n.toLocaleString('zh-CN')
 }
 
 function formatDuration(ms?: number): string {
@@ -73,156 +89,179 @@ function barTone(pct: number) {
 }
 
 export function UsagePage(_props: { path?: string }) {
+  const [period, setPeriod] = useState<UsagePeriod>('day')
+  const [agent, setAgent] = useState<AgentUsageStats | null>(null)
+  const [agentMsg, setAgentMsg] = useState('')
+  const [agentBusy, setAgentBusy] = useState(false)
+
   const [snap, setSnap] = useState<UsageSnapshot | null>(null)
   const [health, setHealth] = useState<Health | null>(null)
-  const [msg, setMsg] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [auto, setAuto] = useState(true)
-  const [intervalSec, setIntervalSec] = useState(readIntervalSec)
-  const [intervalDraft, setIntervalDraft] = useState(String(readIntervalSec()))
-  const [nextAt, setNextAt] = useState<number | null>(null)
-  const [now, setNow] = useState(() => Date.now())
+  const [planMsg, setPlanMsg] = useState('')
+  const [planBusy, setPlanBusy] = useState(false)
 
-  const busyRef = useRef(false)
-  const autoRef = useRef(auto)
-  const intervalRef = useRef(intervalSec)
-  autoRef.current = auto
-  intervalRef.current = intervalSec
+  async function loadAgent(p: UsagePeriod = period) {
+    setAgentBusy(true)
+    try {
+      const data = await fetchJson<AgentUsageStats>(`/api/usage/agent?period=${p}`)
+      setAgent(data)
+      setAgentMsg('')
+    } catch (e) {
+      setAgent(null)
+      setAgentMsg(e instanceof Error ? e.message : String(e))
+    } finally {
+      setAgentBusy(false)
+    }
+  }
 
-  async function load(opts?: { scheduleNext?: boolean }) {
-    if (busyRef.current) return
-    busyRef.current = true
-    setBusy(true)
+  async function loadPlan() {
+    setPlanBusy(true)
     try {
       const h = await fetchJson<Health>('/api/usage/health')
       setHealth(h)
       if (!h.ok) {
         setSnap(null)
-        setMsg(h.hint || '未配置 API Key')
+        setPlanMsg(h.hint || '未配置 API Key')
         return
       }
       const data = await fetchJson<UsageSnapshot>('/api/usage')
       setSnap(data)
-      setMsg('')
+      setPlanMsg('')
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : String(e))
+      setSnap(null)
+      setPlanMsg(e instanceof Error ? e.message : String(e))
     } finally {
-      busyRef.current = false
-      setBusy(false)
-      if (opts?.scheduleNext !== false && autoRef.current) {
-        setNextAt(Date.now() + intervalRef.current * 1000)
-      }
+      setPlanBusy(false)
     }
-  }
-
-  function applyInterval(raw: string | number) {
-    const next = clampIntervalSec(Number(raw))
-    setIntervalSec(next)
-    setIntervalDraft(String(next))
-    try {
-      localStorage.setItem(STORAGE_KEY, String(next))
-    } catch {
-      /* ignore */
-    }
-    if (autoRef.current) setNextAt(Date.now() + next * 1000)
   }
 
   useEffect(() => {
-    void load()
+    void loadAgent(period)
+  }, [period])
+
+  useEffect(() => {
+    void loadPlan()
   }, [])
 
-  useEffect(() => {
-    if (!auto) {
-      setNextAt(null)
-      return
-    }
-    if (nextAt == null) setNextAt(Date.now() + intervalSec * 1000)
-    const tick = setInterval(() => setNow(Date.now()), 250)
-    return () => clearInterval(tick)
-  }, [auto, intervalSec])
-
-  useEffect(() => {
-    if (!auto || nextAt == null || busyRef.current) return
-    if (now >= nextAt) void load()
-  }, [now, nextAt, auto])
-
-  const remainSec =
-    auto && nextAt != null ? Math.max(0, Math.ceil((nextAt - now) / 1000)) : null
+  const maxToolTokens = Math.max(1, ...(agent?.tools.map((t) => t.totalTokens) || [1]))
 
   return (
-    <div class="mx-auto max-w-2xl space-y-6">
-      <header class="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 class="font-display text-2xl font-bold tracking-tight">Token 用量</h1>
-          <p class="mt-1 text-sm text-muted">
-            {health?.provider || 'minimax'}
-            {auto ? ` · 每 ${intervalSec}s 刷新` : ' · 手动刷新'}
-          </p>
+    <div class="mx-auto max-w-2xl space-y-10">
+      <header class="space-y-1">
+        <h1 class="font-display text-2xl font-bold tracking-tight">用量</h1>
+        <p class="text-sm text-muted">本地 Agent 各工具消耗，以及云端 Token Plan 配额。</p>
+      </header>
+
+      <section class="space-y-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 class="font-display text-lg font-bold tracking-tight">Agent 用量</h2>
+            <p class="mt-0.5 text-xs text-muted">
+              {agent
+                ? `${new Date(agent.from).toLocaleString('zh-CN')} — ${new Date(agent.to).toLocaleString('zh-CN')}`
+                : '按本地时区统计'}
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <nav class="flex gap-0.5 rounded-xl border border-border/80 bg-card/80 p-1">
+              {PERIODS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPeriod(p.id)}
+                  class={cn(
+                    'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+                    period === p.id
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted hover:bg-surface hover:text-foreground',
+                  )}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </nav>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={agentBusy}
+              onClick={() => void loadAgent(period)}
+            >
+              {agentBusy ? '刷新中…' : '刷新'}
+            </Button>
+          </div>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <Button
-            variant={auto ? 'default' : 'secondary'}
-            size="sm"
-            onClick={() => {
-              setAuto((v) => {
-                const on = !v
-                if (on) setNextAt(Date.now() + intervalRef.current * 1000)
-                return on
-              })
-            }}
-          >
-            {auto ? '自动 ON' : '自动 OFF'}
-          </Button>
-          <label class="flex items-center gap-1.5 text-sm text-muted">
-            <span class="whitespace-nowrap">间隔</span>
-            <Input
-              type="number"
-              min={MIN_SEC}
-              step={1}
-              value={intervalDraft}
-              className="h-8 w-[4.5rem] px-2 text-center tabular-nums"
-              onInput={(e) => setIntervalDraft((e.target as HTMLInputElement).value)}
-              onChange={(e) => applyInterval((e.target as HTMLInputElement).value)}
-              onBlur={(e) => applyInterval((e.target as HTMLInputElement).value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  applyInterval((e.target as HTMLInputElement).value)
-                  ;(e.target as HTMLInputElement).blur()
-                }
-              }}
-            />
-            <span>秒</span>
-          </label>
-          <span
-            class={`min-w-[5.5rem] rounded-md px-2 py-1 text-center text-sm tabular-nums ${
-              auto ? 'bg-accent/70 text-primary' : 'bg-surface text-muted'
-            }`}
-          >
-            {auto && remainSec != null ? `${remainSec}s` : '—'}
-          </span>
+
+        {agentMsg ? <p class="text-sm text-destructive">{agentMsg}</p> : null}
+
+        {agent ? (
+          <>
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Stat label="调用" value={String(agent.calls)} />
+              <Stat label="合计 Token" value={formatTokens(agent.totalTokens)} />
+              <Stat label="输入" value={formatTokens(agent.inputTokens)} />
+              <Stat label="输出" value={formatTokens(agent.outputTokens)} />
+            </div>
+
+            {agent.tools.length ? (
+              <ul class="space-y-3">
+                {agent.tools.map((t) => (
+                  <li key={t.tool}>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>{t.label}</CardTitle>
+                        <Badge>{t.calls} 次</Badge>
+                      </CardHeader>
+                      <div class="mb-2 h-2 overflow-hidden rounded-full bg-surface">
+                        <div
+                          class="h-full rounded-full bg-primary transition-all"
+                          style={{
+                            width: `${Math.max(4, (t.totalTokens / maxToolTokens) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <p class="text-xs text-muted">
+                        合计 {formatTokens(t.totalTokens)} · 入{' '}
+                        {formatTokens(t.inputTokens)} · 出 {formatTokens(t.outputTokens)}
+                      </p>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="rounded-xl border border-dashed border-border/80 bg-card/40 px-4 py-8 text-center text-sm text-muted">
+                本时段暂无 Agent 调用记录。跑一次 <code class="text-foreground">tkt gc</code> 或{' '}
+                <code class="text-foreground">tkt report</code> 后会记在这里。
+              </p>
+            )}
+          </>
+        ) : !agentMsg ? (
+          <p class="text-sm text-muted">加载中…</p>
+        ) : null}
+      </section>
+
+      <section class="space-y-4 border-t border-border/60 pt-8">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 class="font-display text-lg font-bold tracking-tight">Token Plan</h2>
+            <p class="mt-0.5 text-xs text-muted">
+              {health?.provider || 'minimax'}
+              {snap ? ` · 拉取于 ${new Date(snap.fetchedAt).toLocaleString('zh-CN')}` : ''}
+            </p>
+          </div>
           <Button
             variant="secondary"
             size="sm"
-            disabled={busy}
-            onClick={() => void load()}
+            disabled={planBusy}
+            onClick={() => void loadPlan()}
           >
-            {busy ? '刷新中…' : '立即刷新'}
+            {planBusy ? '刷新中…' : '刷新配额'}
           </Button>
         </div>
-      </header>
 
-      {msg ? (
-        <p class={`text-sm ${snap ? 'text-muted' : 'text-destructive'}`}>{msg}</p>
-      ) : null}
+        {planMsg ? (
+          <p class={`text-sm ${snap ? 'text-muted' : 'text-destructive'}`}>{planMsg}</p>
+        ) : null}
 
-      {snap ? (
-        <>
-          <p class="text-xs text-muted">
-            {snap.displayName} · 拉取于{' '}
-            {new Date(snap.fetchedAt).toLocaleString('zh-CN')}
-            {auto && remainSec != null ? ` · 下次刷新 ${remainSec}s` : ''}
-          </p>
+        {snap ? (
           <div class="space-y-4">
             {snap.models.map((m) => (
               <Card key={m.name}>
@@ -266,10 +305,19 @@ export function UsagePage(_props: { path?: string }) {
               </Card>
             ))}
           </div>
-        </>
-      ) : !msg ? (
-        <p class="text-sm text-muted">加载中…</p>
-      ) : null}
+        ) : !planMsg ? (
+          <p class="text-sm text-muted">加载中…</p>
+        ) : null}
+      </section>
+    </div>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div class="rounded-xl border border-border/80 bg-card/80 px-3 py-3">
+      <p class="text-[11px] font-medium uppercase tracking-[0.08em] text-muted">{label}</p>
+      <p class="mt-1 font-display text-xl font-bold tabular-nums tracking-tight">{value}</p>
     </div>
   )
 }
