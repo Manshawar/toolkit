@@ -1,7 +1,7 @@
 /** 按 CommitPlan 落库：单 commit 提交 diff 全部文件；多 commit 按 files 拆分 */
 import chalk from 'chalk'
-import { createGit } from '../../../core/git'
-import { createSpinner } from '../../../ui'
+import { createGit } from '@/core/git'
+import { createSpinner } from '@/ui'
 import { GitSubmitError } from '../errors'
 import type { Step } from '../types'
 

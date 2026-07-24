@@ -4,7 +4,7 @@
  */
 import * as fs from 'fs'
 import * as path from 'path'
-import { dataDir, ensureDataDir } from '../../core/paths'
+import { dataDir, ensureDataDir } from '@/core/paths'
 
 export const BENCH_ARG = 'bench'
 

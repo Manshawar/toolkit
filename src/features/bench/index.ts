@@ -2,7 +2,7 @@
  * `tkt bench` + `tkt bench ui`
  */
 import { Command } from 'commander'
-import { startUiServer, DEFAULT_PORT } from '../../server'
+import { startUiServer, DEFAULT_PORT } from '@/server'
 import { runBenchCli } from './cli'
 
 function parseConcurrency(raw: unknown): number {

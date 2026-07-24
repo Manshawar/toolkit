@@ -38,6 +38,7 @@ features/<name>/
 - 新能力照现有 feature 拆阶段；简单工具（一两文件）可不拆
 - 阶段目录用 `index.ts` 对外导出；编排只从阶段目录 import
 - 共享路径用 `src/core/paths.ts`，不要各写一套找 package root
+- 跨模块 import 用路径别名 `@/*` → `src/*`（tsconfig `paths` + tsup `esbuild` alias）；feature 内部仍用相对路径
 - AI 调用：`createAiClient()` 必须在 `withCatRun` 外；缺配置先填，再显示「思考中」
 ## Web（Hono）
 

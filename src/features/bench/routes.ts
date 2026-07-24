@@ -4,7 +4,7 @@
 import * as fs from 'fs'
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
-import { assetPath } from '../../core/paths'
+import { assetPath } from '@/core/paths'
 import {
   EnvMissingError,
   benchModels,

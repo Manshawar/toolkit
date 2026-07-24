@@ -6,7 +6,7 @@
 import * as p from '@clack/prompts'
 import chalk from 'chalk'
 import type { RepoEntry } from '../types'
-import { projectLabel } from '@/ai'
+import { projectLabel } from '../ai'
 import { promptWorkWindow } from '../hours'
 import { applyRoster, loadSetting, writeSetting } from '../setting'
 

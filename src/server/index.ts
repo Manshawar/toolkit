@@ -4,9 +4,9 @@
  */
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
-import { mountBenchRoutes } from '../features/bench/routes'
-import { gatewayConfigPath, normalizeApiRoot, readEnv } from '../features/bench/lib'
-import * as watch from '../features/bench/watch'
+import { mountBenchRoutes } from '@/features/bench/routes'
+import { gatewayConfigPath, normalizeApiRoot, readEnv } from '@/features/bench/lib'
+import * as watch from '@/features/bench/watch'
 import type { FeatureMount } from './types'
 
 const DEFAULT_PORT = 8787

@@ -3,8 +3,8 @@
  * 新增场景：在此加 union，并在对应目录注册 loader。
  */
 import type { LanguageModel, ToolSet } from 'ai'
-import type { DiffInfo } from '../features/git-submit/types'
-import type { GatherResult } from '../features/report/types'
+import type { DiffInfo } from '@/features/git-submit/types'
+import type { GatherResult } from '@/features/report/types'
 
 /** 按业务场景划分；一场景可挂多个 tool */
 export type ToolScenario = 'git-submit.commit-plan' | 'report.daily'

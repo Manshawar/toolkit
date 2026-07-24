@@ -1,5 +1,5 @@
 /** CommitPlan：system 来自 prompts/；user 只拼运行时数据 */
-import { loadPrompt } from '../../prompts'
+import { loadPrompt } from '@/features/prompts'
 import type { StyleSummary } from '../types'
 
 export const COMMIT_PLAN_PROMPT_ID = 'git-submit.commit-plan' as const

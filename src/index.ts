@@ -10,6 +10,8 @@
  *   ui/                 CLI spinner
  *   tools/              AI tools
  *   features/           一命令一目录（git-submit / bench / …）
+ *
+ * 跨模块 import：`@/*` → `src/*`（见 tsconfig paths / tsup alias）
  * ```
  */
 import * as path from 'path'

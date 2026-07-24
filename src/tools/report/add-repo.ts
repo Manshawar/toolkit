@@ -5,8 +5,8 @@
 import { tool, type ToolSet } from 'ai'
 import { z } from 'zod'
 import chalk from 'chalk'
-import { addAndGatherRepo, mergeGatherRepo } from '../../features/report/gather'
-import { loadPromptJson } from '../../features/prompts'
+import { addAndGatherRepo, mergeGatherRepo } from '@/features/report/gather'
+import { loadPromptJson } from '@/features/prompts'
 import type { ToolLoadContext } from '../types'
 
 interface ToolMeta {

@@ -6,7 +6,7 @@ import * as fs from 'fs'
 import { config as loadDotenv } from 'dotenv'
 import * as p from '@clack/prompts'
 import chalk from 'chalk'
-import { packageRoot } from '../../../core/paths'
+import { packageRoot } from '@/core/paths'
 import * as path from 'path'
 
 export const GC_PUSH_ENV_KEY = 'TKT_GC_PUSH' as const

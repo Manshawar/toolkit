@@ -6,7 +6,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { fileURLToPath } from 'url'
 import chalk from 'chalk'
-import { emitCliError, emitJson, PromptListSchema, PromptShowSchema } from '../../core/cli'
+import { emitCliError, emitJson, PromptListSchema, PromptShowSchema } from '@/core/cli'
 
 export const PROMPT_CATALOG = {
   'git-submit.commit-plan': 'git-submit/commit-plan.md',
