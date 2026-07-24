@@ -30,7 +30,7 @@ export function ensureDataDir(arg: string): string {
   return dir
 }
 
-/** 包内静态资源（如 assets/bench/ui.html） */
+/** 包内静态资源（SPA：assets/ui） */
 export function assetPath(...parts: string[]): string {
   return path.join(packageRoot(), 'assets', ...parts)
 }

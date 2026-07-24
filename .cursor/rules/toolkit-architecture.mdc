@@ -43,7 +43,7 @@ features/<name>/
 - 阶段目录用 `index.ts` 对外导出；编排只从阶段目录 import
 - 共享路径用 `src/core/paths.ts`，不要各写一套找 package root
 - 跨模块 import 用路径别名 `@/*` → `src/*`（tsconfig `paths` + tsup `esbuild` alias）；feature 内部仍用相对路径
-## Web（Hono）
+## Web（Hono + Preact）
 
 - **只开一个端口**（默认 `127.0.0.1:8787`，`tkt ui`）
 - 各工具用路由区分，不要另起进程/端口：
@@ -51,7 +51,12 @@ features/<name>/
   - API：`/api/<name>/*`
 - Hono 做本机网关：**反向代理 / 挂载**各 feature 的页面与 API；业务逻辑留在 `features/`，`src/server/` 只负责组 app、listen
 - 新工具：在 feature 里 `mount(app)`，登记到 `src/server/index.ts` 的 mounts 列表
-- 不引入 Express / Vite 当本地工具 UI 壳
+- 前端源码在 `web/`（Vite + Preact + Tailwind + shadcn 风格）；`web/node_modules` 不入库
+- **单一 SPA**：`pnpm web:build` → `assets/ui/`；不要按工具多入口拆 `assets/<name>/`
+- Hono：`/api/<name>/*` 由 feature mount；其余 GET 静态资源 + SPA fallback（前端路由自管）
+- 不引入 Express；不以独立 Vite 替代 `tkt ui`（开发可 `pnpm web:dev`，API 代理 8787）
+- Bench 网关在 `/bench`（`~/.config/tkt/bench/gateway.json`）；全局 AI 在 `/setting`（`~/.config/tkt/ai/.env`）
+
 
 ## Prompt
 

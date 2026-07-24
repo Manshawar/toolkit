@@ -9,7 +9,12 @@
   "scripts": {
     "dev": "tsup --watch",
     "build": "tsup",
-    "prepublishOnly": "pnpm build"
+    "build:all": "pnpm web:build && pnpm build",
+    "web:dev": "pnpm --dir web dev",
+    "web:build": "pnpm --dir web build",
+    "ui:serve": "tsx watch src/index.ts ui",
+    "ui:dev": "node scripts/dev-ui.mjs",
+    "prepublishOnly": "pnpm build:all"
   },
   "files": [
     "lib",

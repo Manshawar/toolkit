@@ -4,6 +4,13 @@
 /build
 /lib
 .pnpm-store
+
+# web (Vite + Preact)
+/web/node_modules
+/web/dist
+/web/dist-ssr
+/web/*.local
+
 # Logs
 logs
 *.log
