@@ -14,6 +14,10 @@ type AiSetting = {
   model?: string
 }
 
+type UpdatePrefs = {
+  checkIntervalHours: number
+}
+
 export function SettingPage(_props: { path?: string }) {
   const [info, setInfo] = useState<AiSetting | null>(null)
   const [baseUrl, setBaseUrl] = useState('')
@@ -22,6 +26,11 @@ export function SettingPage(_props: { path?: string }) {
   const [msg, setMsg] = useState('')
   const [ok, setOk] = useState(false)
   const [busy, setBusy] = useState(false)
+
+  const [intervalHours, setIntervalHours] = useState('3')
+  const [updateMsg, setUpdateMsg] = useState('')
+  const [updateOk, setUpdateOk] = useState(false)
+  const [updateBusy, setUpdateBusy] = useState(false)
 
   async function load() {
     try {
@@ -39,6 +48,22 @@ export function SettingPage(_props: { path?: string }) {
     } catch (e) {
       setOk(false)
       setMsg(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  async function loadUpdate() {
+    try {
+      const data = await fetchJson<UpdatePrefs>('/api/setting/update')
+      setIntervalHours(String(data.checkIntervalHours))
+      setUpdateOk(true)
+      setUpdateMsg(
+        data.checkIntervalHours <= 0
+          ? '已关闭自动检查'
+          : `每 ${data.checkIntervalHours} 小时检查一次`,
+      )
+    } catch (e) {
+      setUpdateOk(false)
+      setUpdateMsg(e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -66,18 +91,47 @@ export function SettingPage(_props: { path?: string }) {
     }
   }
 
+  async function saveUpdate() {
+    setUpdateBusy(true)
+    setUpdateMsg('保存中…')
+    try {
+      const n = Number(intervalHours)
+      if (!Number.isFinite(n) || n < 0) {
+        throw new Error('间隔须为 ≥0 的数字（0 = 关闭）')
+      }
+      const data = await fetchJson<UpdatePrefs>('/api/setting/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkIntervalHours: Math.floor(n) }),
+      })
+      setIntervalHours(String(data.checkIntervalHours))
+      setUpdateOk(true)
+      setUpdateMsg(
+        data.checkIntervalHours <= 0
+          ? '已关闭自动检查'
+          : `已保存：每 ${data.checkIntervalHours} 小时检查一次`,
+      )
+    } catch (e) {
+      setUpdateOk(false)
+      setUpdateMsg(e instanceof Error ? e.message : String(e))
+    } finally {
+      setUpdateBusy(false)
+    }
+  }
+
   useEffect(() => {
     void load()
+    void loadUpdate()
   }, [])
 
   return (
     <div class="animate-rise mx-auto max-w-xl space-y-6">
       <header class="space-y-2">
         <h1 class="font-display text-2xl font-bold tracking-tight sm:text-[1.75rem]">
-          AI 配置
+          全局配置
         </h1>
         <p class="text-sm leading-relaxed text-muted">
-          全局 OpenAI Compatible 网关，写入本机配置，供 CLI 与 agent 共用。
+          AI 网关与 CLI 更新检查，写入本机配置，供 CLI 与 agent 共用。
         </p>
       </header>
 
@@ -88,7 +142,7 @@ export function SettingPage(_props: { path?: string }) {
               class={`size-2 shrink-0 rounded-full ${ok ? 'bg-success' : 'bg-border'}`}
               aria-hidden
             />
-            <CardTitle>网关</CardTitle>
+            <CardTitle>AI 网关</CardTitle>
           </div>
           <Button variant="ghost" size="sm" onClick={() => void load()}>
             刷新
@@ -139,10 +193,52 @@ export function SettingPage(_props: { path?: string }) {
         </div>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <div class="flex min-w-0 flex-1 items-center gap-2.5">
+            <span
+              class={`size-2 shrink-0 rounded-full ${updateOk ? 'bg-success' : 'bg-border'}`}
+              aria-hidden
+            />
+            <CardTitle>更新检查</CardTitle>
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => void loadUpdate()}>
+            刷新
+          </Button>
+        </CardHeader>
+
+        <div class="space-y-4">
+          <div class="space-y-1.5">
+            <Label>检查间隔（小时）</Label>
+            <Input
+              type="number"
+              min={0}
+              max={168}
+              step={1}
+              value={intervalHours}
+              placeholder="3"
+              onInput={(e) => setIntervalHours((e.target as HTMLInputElement).value)}
+            />
+            <p class="text-xs text-muted">默认 3；设为 0 关闭。CLI 启动时后台检查 npm 新版本。</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 pt-1">
+            <Button disabled={updateBusy} onClick={() => void saveUpdate()}>
+              保存
+            </Button>
+            <p
+              class={`text-sm ${updateOk ? 'text-success' : updateMsg ? 'text-destructive' : 'text-muted'}`}
+            >
+              {updateMsg}
+            </p>
+          </div>
+        </div>
+      </Card>
+
       <div class="rounded-2xl border border-dashed border-border/90 bg-surface/40 px-5 py-4 text-sm leading-relaxed text-muted">
         <p>测速网关请在「测速」页单独配置；日报偏好在「日报」页。</p>
         <p class="mt-1.5">
-          此处供 <span class="text-foreground">tkt gc</span> /{' '}
+          AI 配置供 <span class="text-foreground">tkt gc</span> /{' '}
           <span class="text-foreground">report</span> /{' '}
           <span class="text-foreground">agent</span> 使用；也可用{' '}
           <span class="text-foreground">tkt config</span>。

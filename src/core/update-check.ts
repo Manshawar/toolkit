@@ -1,21 +1,28 @@
 /**
  * CLI 版本检查（异步、不阻塞启动）：
  * - 后台拉 npm latest，有更新则 stderr 提示一行
- * - 记录上次提示时间 notifiedAt；未满 24h 不再提醒、也不重复请求
- * - 关闭：TKT_NO_UPDATE=1 / CI / --json / -v|-h
+ * - 记录上次检查时间 checkedAt；未满间隔不再请求
+ * - 间隔默认 3h，可在 `tkt config ui` / `/setting` 改；prefs：~/.config/tkt/update/prefs.json
+ * - 关闭：TKT_NO_UPDATE=1 / CI / --json / -v|-h / 间隔设为 0
  */
 import * as fs from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 import chalk from 'chalk'
+import { dataDir, ensureDataDir } from '@/core/paths'
 
-const REMIND_AFTER_MS = 24 * 60 * 60 * 1000
+const DEFAULT_INTERVAL_HOURS = 3
 const FETCH_TIMEOUT_MS = 5000
 
 interface CacheFile {
-  /** 上次向用户提示的时间 */
-  notifiedAt: number
+  /** 上次向 registry 请求的时间 */
+  checkedAt: number
   latest?: string
+}
+
+export interface UpdatePrefs {
+  /** 检查间隔（小时）；默认 3；0 = 关闭 */
+  checkIntervalHours: number
 }
 
 function pkgMeta(): { name: string; version: string } {
@@ -26,22 +33,69 @@ function pkgMeta(): { name: string; version: string } {
 }
 
 function cachePath(): string {
+  return path.join(dataDir('update'), 'check-cache.json')
+}
+
+/** 旧缓存路径（兼容一次） */
+function legacyCachePath(): string {
   return path.join(os.homedir(), '.cache', 'tkt', 'update-check.json')
 }
 
-function readCache(): CacheFile | null {
+function prefsPath(): string {
+  return path.join(dataDir('update'), 'prefs.json')
+}
+
+function clampIntervalHours(n: unknown): number {
+  if (typeof n !== 'number' || !Number.isFinite(n) || n < 0) return DEFAULT_INTERVAL_HOURS
+  return Math.min(168, Math.floor(n))
+}
+
+export function loadUpdatePrefs(): UpdatePrefs {
   try {
-    const j = JSON.parse(fs.readFileSync(cachePath(), 'utf8')) as CacheFile
-    if (typeof j.notifiedAt !== 'number') return null
-    return j
+    const j = JSON.parse(fs.readFileSync(prefsPath(), 'utf8')) as Partial<UpdatePrefs>
+    return { checkIntervalHours: clampIntervalHours(j.checkIntervalHours) }
   } catch {
-    return null
+    return { checkIntervalHours: DEFAULT_INTERVAL_HOURS }
   }
+}
+
+export function saveUpdatePrefs(partial: Partial<UpdatePrefs>): UpdatePrefs {
+  const cur = loadUpdatePrefs()
+  const next: UpdatePrefs = {
+    checkIntervalHours:
+      partial.checkIntervalHours !== undefined
+        ? clampIntervalHours(partial.checkIntervalHours)
+        : cur.checkIntervalHours,
+  }
+  ensureDataDir('update')
+  fs.writeFileSync(prefsPath(), JSON.stringify(next, null, 2) + '\n', 'utf8')
+  return next
+}
+
+function readCache(): CacheFile | null {
+  for (const p of [cachePath(), legacyCachePath()]) {
+    try {
+      const j = JSON.parse(fs.readFileSync(p, 'utf8')) as CacheFile & {
+        notifiedAt?: number
+      }
+      const checkedAt =
+        typeof j.checkedAt === 'number'
+          ? j.checkedAt
+          : typeof j.notifiedAt === 'number'
+            ? j.notifiedAt
+            : NaN
+      if (!Number.isFinite(checkedAt)) continue
+      return { checkedAt, latest: j.latest }
+    } catch {
+      // try next
+    }
+  }
+  return null
 }
 
 function writeCache(data: CacheFile): void {
   try {
-    fs.mkdirSync(path.dirname(cachePath()), { recursive: true })
+    ensureDataDir('update')
     fs.writeFileSync(cachePath(), JSON.stringify(data), 'utf8')
   } catch {
     // ignore
@@ -99,15 +153,19 @@ async function fetchLatest(name: string): Promise<string | null> {
 async function runUpdateCheck(): Promise<void> {
   if (shouldSkip()) return
 
+  const prefs = loadUpdatePrefs()
+  if (prefs.checkIntervalHours <= 0) return
+
   const { name, version: current } = pkgMeta()
   if (!current || current === '0.0.0') return
 
+  const intervalMs = prefs.checkIntervalHours * 60 * 60 * 1000
   const now = Date.now()
   const cache = readCache()
-  // 24h 内已提示过 → 不再请求、不再提醒
-  if (cache && now - cache.notifiedAt < REMIND_AFTER_MS) return
+  if (cache && now - cache.checkedAt < intervalMs) return
 
   const latest = await fetchLatest(name)
+  writeCache({ checkedAt: now, latest: latest || cache?.latest })
   if (!latest || !isNewer(latest, current)) return
 
   console.error(
@@ -115,7 +173,6 @@ async function runUpdateCheck(): Promise<void> {
       `⚠ ${name} 有新版本 ${latest}（当前 ${current}）  升级: pnpm add -g ${name}@latest`,
     ),
   )
-  writeCache({ notifiedAt: now, latest })
 }
 
 /** 异步调度：立即返回，不阻塞 CLI */

@@ -1,8 +1,9 @@
 /**
- * Setting API：全局 AI 配置（供 gc / report / agent）
+ * Setting API：全局 AI 配置 + CLI 更新检查偏好
  */
 import { Hono } from 'hono'
 import { getAiConfigView, saveAiConfigFields, aiEnvPath } from '@/agent'
+import { loadUpdatePrefs, saveUpdatePrefs } from '@/core/update-check'
 
 /** API：挂在 /api/setting */
 export function createSettingApiRoutes(): Hono {
@@ -27,6 +28,23 @@ export function createSettingApiRoutes(): Hono {
         saved: aiEnvPath(),
         ...getAiConfigView(),
       })
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : String(e) }, 400)
+    }
+  })
+
+  app.get('/update', (c) => c.json(loadUpdatePrefs()))
+
+  app.post('/update', async (c) => {
+    try {
+      const body = (await c.req.json().catch(() => ({}))) as {
+        checkIntervalHours?: number
+      }
+      const prefs = saveUpdatePrefs({
+        checkIntervalHours:
+          typeof body.checkIntervalHours === 'number' ? body.checkIntervalHours : undefined,
+      })
+      return c.json({ ok: true, ...prefs })
     } catch (e) {
       return c.json({ error: e instanceof Error ? e.message : String(e) }, 400)
     }
