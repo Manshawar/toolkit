@@ -19,10 +19,18 @@ import { GitSubmitError } from '../errors'
 import type { DiffInfo, FileDiff, Step, StyleSummary } from '../types'
 
 /** 忽略构建产物 / 依赖；根目录 lib/ 为 tsup 产物。lockfile 有复现价值，不忽略。 */
-const JUNK_RE =
+export const JUNK_RE =
   /(^|\/)(node_modules|dist|build)\/|(^|\/)\.DS_Store$|\.log$|\.tmp$|(^)lib\//
 const CONVENTIONAL_RE =
   /^(feat|fix|refactor|style|docs|test|perf|build|ci|chore|revert|init)(\(.+\))?[!]?:\s+/i
+
+/** 工作区仍待提交的路径（已滤 junk） */
+export async function listPendingPaths(cwd: string): Promise<string[]> {
+  const status = await createGit(cwd).status()
+  return [...status.files.map((f) => f.path), ...status.not_added].filter(
+    (p, i, arr) => arr.indexOf(p) === i && !JUNK_RE.test(p),
+  )
+}
 
 export const stepConflict: Step = async (ctx) => {
   const conflicted = (await createGit(ctx.cwd).status()).conflicted
@@ -42,9 +50,7 @@ export const stepDiff: Step = async (ctx) => {
   try {
     const git = createGit(ctx.cwd)
     const status = await git.status()
-    const paths = [...status.files.map((f) => f.path), ...status.not_added].filter(
-      (p, i, arr) => arr.indexOf(p) === i && !JUNK_RE.test(p),
-    )
+    const paths = (await listPendingPaths(ctx.cwd))
     if (paths.length === 0) {
       spin.succeed('clean')
       throw new GitSubmitError('工作区干净，无需提交', 'CLEAN')

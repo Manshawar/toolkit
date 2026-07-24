@@ -2,6 +2,7 @@
 import chalk from 'chalk'
 import { createGit } from '@/core/git'
 import { createSpinner } from '@/ui'
+import { listPendingPaths } from '../collect'
 import { GitSubmitError } from '../errors'
 import type { Step } from '../types'
 
@@ -28,43 +29,32 @@ export const stepCommit: Step = async (ctx) => {
       const hash = r.commit || (await git.revparse(['HEAD']))
       hashes.push(hash)
       spin.succeed(`${c.message} (${hash.slice(0, 7)})`)
-      return { ...ctx, commitHashes: hashes }
-    }
-
-    for (let i = 0; i < commits.length; i++) {
-      const c = commits[i]
-      if (!c.files?.length) throw new GitSubmitError(`多 commit 必须指定 files: ${c.message}`)
-      spin.update(`commit ${i + 1}/${commits.length} · ${c.message}`)
-      await git.add(c.files)
-      const status = await git.status()
-      if (status.staged.length === 0 && status.created.length === 0) {
-        throw new GitSubmitError(`无暂存文件: ${c.message}`)
+    } else {
+      for (let i = 0; i < commits.length; i++) {
+        const c = commits[i]
+        if (!c.files?.length) throw new GitSubmitError(`多 commit 必须指定 files: ${c.message}`)
+        spin.update(`commit ${i + 1}/${commits.length} · ${c.message}`)
+        await git.add(c.files)
+        const status = await git.status()
+        if (status.staged.length === 0 && status.created.length === 0) {
+          throw new GitSubmitError(`无暂存文件: ${c.message}`)
+        }
+        const r = await git.commit(c.message)
+        const hash = r.commit || (await git.revparse(['HEAD']))
+        hashes.push(hash)
       }
-      const r = await git.commit(c.message)
-      const hash = r.commit || (await git.revparse(['HEAD']))
-      hashes.push(hash)
+
+      // 与 git log 一致：最新在上
+      for (let i = commits.length - 1; i >= 0; i--) {
+        const hash = hashes[i] ?? ''
+        console.log(chalk.cyan(`  • ${commits[i].message} (${hash.slice(0, 7)})`))
+      }
+
+      spin.succeed(`commit × ${hashes.length}`)
     }
 
-    // 与 git log 一致：最新在上
-    for (let i = commits.length - 1; i >= 0; i--) {
-      const hash = hashes[i] ?? ''
-      console.log(chalk.cyan(`  • ${commits[i].message} (${hash.slice(0, 7)})`))
-    }
-
-    spin.succeed(`commit × ${hashes.length}`)
-
-    // 多 commit 后若还有残留，提示（常见于 AI files 漏列 / 过滤误伤）
-    const left = await git.status()
-    const leftover = [...left.files.map((f) => f.path), ...left.not_added].filter(
-      (p, i, arr) => arr.indexOf(p) === i,
-    )
-    if (leftover.length > 0 && !quiet) {
-      console.log(chalk.yellow(`  ⚠ 仍有 ${leftover.length} 个文件未纳入本次 plan，可再跑 tkt gc`))
-      for (const p of leftover.slice(0, 12)) console.log(chalk.dim(`    · ${p}`))
-      if (leftover.length > 12) console.log(chalk.dim(`    · … +${leftover.length - 12}`))
-    }
-
-    return { ...ctx, commitHashes: hashes }
+    const leftover = await listPendingPaths(ctx.cwd)
+    return { ...ctx, commitHashes: hashes, leftover }
   } catch (e) {
     if (spin.status === 'running') {
       spin.fail(e instanceof Error ? e.message : String(e))

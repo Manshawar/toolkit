@@ -1,4 +1,5 @@
 /** 远程同步：pull（可跳过无 upstream）+ push（Gerrit：grp + 普通 push） */
+import chalk from 'chalk'
 import { createGit, currentBranch, listRemotes, pushOrigin } from '@/core/git'
 import { runGrp } from '@/features/grp'
 import { createSpinner, withSpinner } from '@/ui'

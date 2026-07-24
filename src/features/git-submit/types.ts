@@ -73,6 +73,8 @@ export interface GitSubmitContext {
   style?: StyleSummary
   commitPlan?: CommitPlan
   commitHashes?: string[]
+  /** 本轮 commit 后仍待提交的路径 */
+  leftover?: string[]
   pushed?: boolean
 }
 
