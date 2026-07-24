@@ -45,6 +45,7 @@ export const stepAnalyze: Step = async (ctx) => {
         user,
         tools,
         maxSteps: 6,
+        usageTool: 'gc',
       })
     },
     { quiet },

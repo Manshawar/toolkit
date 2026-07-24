@@ -118,6 +118,7 @@ export async function fillMissingDisplayNames(
               '不要加「项目」后缀。只输出 JSON。',
             ].join('\n'),
             user: JSON.stringify(payload, null, 2),
+            usageTool: 'report.guess-name',
           }),
         { quiet: Boolean(opts.quiet) },
       )

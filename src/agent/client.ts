@@ -15,9 +15,11 @@ import {
   stepCountIs,
   wrapLanguageModel,
   type LanguageModel,
+  type LanguageModelUsage,
   type ToolSet,
 } from 'ai'
 import type { z } from 'zod'
+import { appendAgentUsage } from '@/features/usage/agent'
 import {
   interceptAiConfig,
   isAiConfigError,
@@ -51,6 +53,21 @@ export interface GenerateObjectOptions<SCHEMA extends z.ZodType> {
   /** Output.object 名称（网关 JSON Schema） */
   name?: string
   description?: string
+  /** 用量记账工具名（如 gc / report），缺省不记 */
+  usageTool?: string
+}
+
+function recordUsage(
+  tool: string | undefined,
+  model: string | undefined,
+  usage: LanguageModelUsage | undefined,
+): void {
+  if (!tool || !usage) return
+  const inputTokens = usage.inputTokens ?? 0
+  const outputTokens = usage.outputTokens ?? 0
+  const totalTokens = usage.totalTokens ?? inputTokens + outputTokens
+  if (inputTokens <= 0 && outputTokens <= 0 && totalTokens <= 0) return
+  appendAgentUsage({ tool, model, inputTokens, outputTokens, totalTokens })
 }
 
 export interface AgentClient {
@@ -149,13 +166,13 @@ export async function createAgentClient(config?: AiConfig): Promise<AgentClient>
     async generateObject<SCHEMA extends z.ZodType>(
       opts: GenerateObjectOptions<SCHEMA>,
     ): Promise<z.infer<SCHEMA>> {
-      const { schema, system, user, tools, maxSteps, name, description } = opts
+      const { schema, system, user, tools, maxSteps, name, description, usageTool } = opts
       // Tool loop：SDK stopWhen / stepCountIs（与 ToolLoopAgent 同机制）
       const steps = maxSteps ?? (tools && Object.keys(tools).length > 0 ? 8 : 1)
 
-      const run = async (model: LanguageModel) => {
+      const run = async (model: LanguageModel, modelId: string) => {
         try {
-          const { output } = await generateText({
+          const result = await generateText({
             model,
             output: Output.object({
               schema,
@@ -167,15 +184,23 @@ export async function createAgentClient(config?: AiConfig): Promise<AgentClient>
             temperature: 0.2,
             ...(tools ? { tools, stopWhen: stepCountIs(steps) } : {}),
           })
-          if (output == null) throw new Error('AI 未返回结构化结果')
-          return output as z.infer<SCHEMA>
+          recordUsage(usageTool, modelId, result.totalUsage ?? result.usage)
+          if (result.output == null) throw new Error('AI 未返回结构化结果')
+          return result.output as z.infer<SCHEMA>
         } catch (e) {
           // SDK 已抛：用原文做一次本地修复（剥 fence / 抽 {…}）再 zod 校验
           if (NoObjectGeneratedError.isInstance(e) && e.text) {
             const raw = extractJsonObject(e.text)
             if (raw) {
               const parsed = schema.safeParse(JSON.parse(raw))
-              if (parsed.success) return parsed.data as z.infer<SCHEMA>
+              if (parsed.success) {
+                const usage =
+                  'usage' in e && e.usage
+                    ? (e.usage as LanguageModelUsage)
+                    : undefined
+                recordUsage(usageTool, modelId, usage)
+                return parsed.data as z.infer<SCHEMA>
+              }
             }
           }
           throw e
@@ -183,14 +208,14 @@ export async function createAgentClient(config?: AiConfig): Promise<AgentClient>
       }
 
       const attempt = async (forcePrompt = false) => {
-        const { model } = await resolve(forcePrompt)
+        const { cfg, model } = await resolve(forcePrompt)
         try {
-          return await run(model)
+          return await run(model, cfg.model)
         } catch (e) {
           if (!NoObjectGeneratedError.isInstance(e)) throw e
           // 整轮再试一次（网关偶发烂 JSON）
           try {
-            return await run(model)
+            return await run(model, cfg.model)
           } catch (e2) {
             if (NoObjectGeneratedError.isInstance(e2)) {
               throw new Error(formatNoObjectError(e2))

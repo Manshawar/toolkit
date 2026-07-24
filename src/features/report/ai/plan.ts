@@ -80,6 +80,7 @@ export async function generateDailyPlan(input: {
         description: 'Daily report plan',
         tools,
         maxSteps: 6,
+        usageTool: 'report',
       })
     },
     { quiet: Boolean(input.quiet) },
