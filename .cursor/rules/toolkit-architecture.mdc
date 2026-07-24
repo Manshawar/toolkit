@@ -12,7 +12,7 @@ alwaysApply: true
 - 本地 Agent 在 `src/agent/`：`client` + `config` + 通用 `runLoop`
 - Tool 级 loop：SDK `stopWhen: stepCountIs`；CLI 工作流「再跑直到完成」：`runLoop`（`src/agent/loop.ts`）
 - 领域细节（gc leftover / push）留在 feature（如 `git-submit/agent-loop`）
-- `createAgentClient()` 必须在 `withCatRun` 外；缺配置先填，再显示「思考中」
+- `createAgentClient()` 创建时即拦截配置（缺则先填）；必须在 `withCatRun` 外调用，再显示「思考中」
 - 用户数据：`~/.config/tkt/<命令名>/`，分文件存，不写进仓库
 
 ## Feature 分层（勿平铺散乱）

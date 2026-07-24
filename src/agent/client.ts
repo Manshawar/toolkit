@@ -136,6 +136,9 @@ export async function createAgentClient(config?: AiConfig): Promise<AgentClient>
     return { cfg: { ...cfg, baseUrl: baseURL }, model }
   }
 
+  // 创建时就拦截配置（缺则先填），避免调用方已开「思考中」再弹表单
+  await resolve()
+
   return {
     async getModel() {
       return (await resolve()).model
