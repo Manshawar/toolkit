@@ -1,10 +1,8 @@
 /**
- * Hono 路由：页面 /bench + API /api/bench/*
+ * Hono API：/api/bench/*（页面由 SPA assets/ui 托管）
  */
-import * as fs from 'fs'
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
-import { assetPath } from '@/core/paths'
 import {
   EnvMissingError,
   benchModels,
@@ -18,18 +16,6 @@ import {
   saveHistory,
 } from './lib'
 import * as watch from './watch'
-
-function readUiHtml(): string {
-  return fs.readFileSync(assetPath('bench', 'ui.html'), 'utf8')
-}
-
-/** 页面路由：GET /bench */
-export function createBenchPageRoutes(): Hono {
-  const app = new Hono()
-  app.get('/', (c) => c.html(readUiHtml()))
-  app.get('/index.html', (c) => c.html(readUiHtml()))
-  return app
-}
 
 function healthPayload() {
   const env = readEnv()
@@ -215,6 +201,5 @@ function handleApiError(c: { json: (obj: unknown, status?: number) => Response }
 }
 
 export function mountBenchRoutes(app: Hono): void {
-  app.route('/bench', createBenchPageRoutes())
   app.route('/api/bench', createBenchApiRoutes())
 }

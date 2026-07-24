@@ -26,7 +26,7 @@ export type BenchCliOpts = {
 
 function printConfigHelp(): void {
   console.error(`缺少网关配置。任选其一：`)
-  console.error(`  1) tkt ui → 打开 /bench，在页面填写 Base URL / API Key 并保存`)
+  console.error(`  1) tkt ui → 打开导航页进入 Bench，填写 Base URL / API Key 并保存`)
   console.error(`  2) 写入 ${gatewayConfigPath()}`)
   console.error(`     {"baseUrl":"https://ai-gateway.example.com","apiKey":"…"}`)
 }
