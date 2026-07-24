@@ -6,6 +6,10 @@
     "lib": ["ES2022"],
     "outDir": "./lib",
     "rootDir": "./src",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
 
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,

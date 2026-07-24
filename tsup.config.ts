@@ -1,8 +1,9 @@
 import { defineConfig } from 'tsup'
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { readFileSync } from 'fs'
 
 const pkg = JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf-8'))
+const src = resolve(process.cwd(), 'src')
 
 export default defineConfig({
   entry: ['src/index.ts'],
@@ -17,6 +18,13 @@ export default defineConfig({
     'process.env.PKG_VERSION': JSON.stringify(pkg.version),
   },
   bundle: true,
+  // 与 tsconfig paths `@/*` → `src/*` 对齐
+  esbuildOptions(options) {
+    options.alias = {
+      ...options.alias,
+      '@': src,
+    }
+  },
   external: [
     'fs',
     'path',
