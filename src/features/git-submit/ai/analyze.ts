@@ -3,7 +3,7 @@
  * 无提交历史：固定 `init: 初始化`，不调 AI。
  */
 import chalk from 'chalk'
-import { createAiClient } from '@/ai'
+import { createAgentClient } from '@/agent'
 import { loadTools } from '@/tools'
 import { withCatRun } from '@/ui'
 import { GitSubmitError } from '../errors'
@@ -29,7 +29,7 @@ export const stepAnalyze: Step = async (ctx) => {
   const quiet = Boolean(ctx.options.json)
 
   // 配置拦截在「思考中」之前；client 在动画外创建
-  const ai = await createAiClient()
+  const ai = await createAgentClient()
   const plan = await withCatRun(
     'analyze',
     async () => {

@@ -1,11 +1,10 @@
 /**
- * 本地 AI：Vercel AI SDK + OpenAI Compatible。
- * 支持 tools（如 deep_inspect_diff）多步后再出结构化结果。
+ * 本地 Agent 客户端：Vercel AI SDK + OpenAI Compatible。
  *
- * 解析失败处理：
- * - extractJsonMiddleware：剥 markdown 代码块
- * - NoObjectGeneratedError.text：本地抽 JSON 再 zod 校验
- * - 仍失败则整轮重试 1 次
+ * Tool 级 loop：SDK 自带 —— `generateText` + `stopWhen: stepCountIs(n)`
+ * （等同 ToolLoopAgent 的步进停条件；结构化输出场景直接用 generateText 更合适）
+ *
+ * 工作流级 loop（如 gc 残留文件）：SDK 没有，见 `./loop.ts`
  */
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import {
@@ -45,19 +44,22 @@ export interface GenerateObjectOptions<SCHEMA extends z.ZodType> {
   user: string
   /** AI SDK tools；模型可自行决定是否调用 */
   tools?: ToolSet
-  /** 含 tool 调用的最大步数，默认有 tools 时 6、否则 1 */
+  /** 含 tool 调用的最大步数，默认有 tools 时 8、否则 1（SDK stopWhen） */
   maxSteps?: number
   /** Output.object 名称（网关 JSON Schema） */
   name?: string
   description?: string
 }
 
-export interface AiClient {
+export interface AgentClient {
   generateObject<SCHEMA extends z.ZodType>(
     opts: GenerateObjectOptions<SCHEMA>,
   ): Promise<z.infer<SCHEMA>>
   getModel(): Promise<LanguageModel>
 }
+
+/** @deprecated 用 AgentClient */
+export type AiClient = AgentClient
 
 /** 从模型原文里抠出可 JSON.parse 的对象文本 */
 function extractJsonObject(text: string): string | null {
@@ -118,7 +120,7 @@ export function supportsStructuredOutputs(model: string): boolean {
   return true
 }
 
-export async function createAiClient(config?: AiConfig): Promise<AiClient> {
+export async function createAgentClient(config?: AiConfig): Promise<AgentClient> {
   async function resolve(forcePrompt = false) {
     if (forcePrompt) resetAiConfigCache()
     const cfg = config ?? (await interceptAiConfig())
@@ -146,7 +148,7 @@ export async function createAiClient(config?: AiConfig): Promise<AiClient> {
       opts: GenerateObjectOptions<SCHEMA>,
     ): Promise<z.infer<SCHEMA>> {
       const { schema, system, user, tools, maxSteps, name, description } = opts
-      // structured output 本身占 1 step；留足 tool 轮次
+      // Tool loop：SDK stopWhen / stepCountIs（与 ToolLoopAgent 同机制）
       const steps = maxSteps ?? (tools && Object.keys(tools).length > 0 ? 8 : 1)
 
       const run = async (model: LanguageModel) => {
@@ -209,3 +211,6 @@ export async function createAiClient(config?: AiConfig): Promise<AiClient> {
     },
   }
 }
+
+/** @deprecated 用 createAgentClient */
+export const createAiClient = createAgentClient

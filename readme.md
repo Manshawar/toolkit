@@ -2,6 +2,24 @@
 
 个人 CLI 工具集，前缀 `tkt`，覆盖 AI 提交、日报、测速等日常高频操作。
 
+## 设计理念
+
+在 Claude Code / Cursor / Codex 等 coding agent 中，用 skill 承载「固定功能的 AI 工具」会带来两个问题：
+
+1. **上下文浪费** — skill 的指令、示例、边界条件全部灌入上下文，还没干活先吃掉几千 token
+2. **不稳定** — 同样的 prompt 跑两次可能有偏差，agent 的「自由度」对确定性操作用错了地方
+
+正确分工：
+
+| | skill | CLI |
+|---|---|---|
+| **角色** | 说明书 | 执行器 |
+| **内容** | 流程规范、注意事项、反模式 | 确定性代码逻辑 |
+| **加载** | 被 agent 读取后执行 | agent 一句 `tkt gc` 直接跑 |
+| **适合** | 需要判断/决策的复杂流程 | 固定输入→固定输出的功能 |
+
+**CLI 做重活，skill 做说明书，agent 做调度。** `tkt` 就是这套思路的实践——把常用 AI 功能（提交分析、日报生成、测速）打包成 CLI，agent 只需一句命令调用，零上下文损耗，结果确定。
+
 ## 安装
 
 ```bash
@@ -32,7 +50,7 @@ tkt config --show       # 查看当前配置（Key 脱敏）
 分析 staged + unstaged diff，自动生成 Conventional Commits 并提交。
 
 ```bash
-tkt gc                  # pull → 分析 diff → 生成 plan → commit
+tkt gc                  # pull → 分析 diff → 生成 plan → commit（残留自动多轮补提，最多 5 轮）
 tkt gc --push           # 自动 push（偏好会被记住）
 tkt gc --no-push        # 关闭自动 push
 tkt gc --no-pull        # 跳过 pull

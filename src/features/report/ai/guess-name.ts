@@ -4,7 +4,7 @@
  * name_custom 手动改过的不再覆盖。
  */
 import { z } from 'zod'
-import { createAiClient } from '@/ai'
+import { createAgentClient } from '@/agent'
 import { withCatRun } from '@/ui'
 import { applyRoster } from '../setting'
 import type { RepoEntry } from '../types'
@@ -101,8 +101,8 @@ export async function fillMissingDisplayNames(
       slug: remoteSlug(r.git_remote) || r.alias,
     }))
     try {
-      // createAiClient 在动画外：缺配置先填，再「思考中」
-      const ai = await createAiClient()
+      // createAgentClient 在动画外：缺配置先填，再「思考中」
+      const ai = await createAgentClient()
       const guessed = await withCatRun(
         'guess-name',
         async () =>

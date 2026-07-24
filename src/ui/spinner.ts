@@ -5,10 +5,10 @@
  *
  * 颜文字参考：https://kaomojis.jp/zh/search?q=%E6%9C%BA%E5%99%A8%E4%BA%BA
  *
- * AI 调用约定：createAiClient() 放在 withCatRun 外，缺配置先填再动画。
+ * AI 调用约定：createAgentClient() 放在 withCatRun 外，缺配置先填再动画。
  *
  * ```ts
- * const ai = await createAiClient()
+ * const ai = await createAgentClient()
  * await withCatRun('analyze', async () => ai.generateObject(…))
  * ```
  */

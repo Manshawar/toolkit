@@ -49,7 +49,7 @@ export async function runReport(options: ReportOptions = {}): Promise<void> {
 
   if (prefs.useGit) {
     let repos = discoverRepos({ userRepos: options.userRepos })
-    // 本地词典先猜；真打 AI 时 createAiClient 才拦截配置
+    // 本地词典先猜；真打 AI 时 createAgentClient 才拦截配置
     repos = await fillMissingDisplayNames(repos, { quiet: Boolean(options.json) })
 
     const interactive = process.stdin.isTTY && !options.json

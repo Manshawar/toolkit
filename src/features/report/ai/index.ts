@@ -1,4 +1,4 @@
-/** AI 阶段：猜中文名 + 生成日报计划。配置拦截仅在 createAiClient（动画外）。 */
+/** AI 阶段：猜中文名 + 生成日报计划。配置拦截仅在 createAgentClient（动画外）。 */
 export {
   defaultDisplayName,
   fillMissingDisplayNames,

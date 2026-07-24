@@ -1,5 +1,5 @@
 /** 本地 AI：prompt + tools(add_repo) + generateObject → DailyPlan */
-import { createAiClient } from '@/ai'
+import { createAgentClient } from '@/agent'
 import { loadTools } from '@/tools'
 import { withCatRun } from '@/ui'
 import { loadPrompt } from '@/features/prompts'
@@ -57,7 +57,7 @@ export async function generateDailyPlan(input: {
   quiet?: boolean
 }): Promise<DailyPlan> {
   // 配置拦截在「思考中」之前；client 在动画外创建，避免表单被盖住
-  const ai = await createAiClient()
+  const ai = await createAgentClient()
   return withCatRun(
     'report',
     async () => {

@@ -4,7 +4,7 @@
  *
  * ```
  * src/
- *   ai/                 Vercel AI SDK
+ *   agent/              Vercel AI SDK + 工作流 loop
  *   core/               paths / env / git / cli
  *   server/             Hono 单端口 UI
  *   ui/                 CLI spinner
@@ -22,10 +22,11 @@ import { runGrp } from './features/grp'
 import { runServe } from './features/sv'
 import { runUsage } from './features/usage'
 import { registerGitSubmitCommands } from './features/git-submit'
+import { registerAgentCommands } from './features/agent'
 import { registerBenchCommands } from './features/bench'
 import { registerReportCommands } from './features/report'
 import { runPromptList, runPromptShow } from './features/prompts'
-import { reconfigureAiConfig, showAiConfig } from './ai'
+import { reconfigureAiConfig, showAiConfig } from './agent'
 import { interceptCliUpdate } from './core/update-check'
 import { startUiServer, DEFAULT_PORT } from './server'
 
@@ -83,6 +84,7 @@ async function main() {
     })
 
   registerGitSubmitCommands(program)
+  registerAgentCommands(program)
   registerBenchCommands(program)
   registerReportCommands(program)
 
