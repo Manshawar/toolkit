@@ -13,6 +13,7 @@ export type { GitSubmitOptions, CommitPlan, GitSubmitContext } from './types'
 export { CommitPlanSchema } from './types'
 export { createContext, runOnce, runWorkflow } from './run'
 export { GitSubmitError } from './errors'
+export { runAgentGc, AGENT_GC_MAX_ROUNDS, type AgentGcOptions } from './agent-loop'
 
 export async function runGitSubmit(options: GitSubmitOptions): Promise<void> {
   try {

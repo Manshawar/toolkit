@@ -3,7 +3,7 @@
  *
  * - client：Vercel AI SDK（tool loop = `stopWhen` / stepCountIs）
  * - config：URL / Key / Model 拦截
- * - loop：工作流级重试（SDK 无此能力，自写）
+ * - loop：通用工作流重试原语（领域 loop 放各 feature，如 git-submit/agent-loop）
  */
 export {
   createAgentClient,
@@ -24,9 +24,4 @@ export {
   recoverAiConfig,
 } from './client'
 
-export {
-  agentLoop,
-  runAgentGc,
-  AGENT_MAX_ROUNDS,
-  type AgentGcOptions,
-} from './loop'
+export { agentLoop } from './loop'

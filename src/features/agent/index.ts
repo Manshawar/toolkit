@@ -1,17 +1,20 @@
 /**
- * `tkt agent` — CLI 入口；实现在 `@/agent`（client + 工作流 loop）
+ * `tkt agent` — CLI 入口；gc 领域 loop 在 git-submit，通用原语在 `@/agent`
  *
  * - `tkt gc`：单次
  * - `tkt agent gc`：残留 / 失败最多再跑 5 轮
  */
 import chalk from 'chalk'
 import { Command, Option } from 'commander'
-import { AGENT_MAX_ROUNDS, runAgentGc } from '@/agent'
 import { emitCliError, emitJson, GitSubmitResultSchema } from '@/core/cli'
-import { GitSubmitError } from '@/features/git-submit/errors'
+import {
+  AGENT_GC_MAX_ROUNDS,
+  runAgentGc,
+  GitSubmitError,
+} from '@/features/git-submit'
 import { printAutoPushStatus, resolveAutoPush } from '@/features/git-submit/prefs'
 
-export { runAgentGc, AGENT_MAX_ROUNDS } from '@/agent'
+export { runAgentGc, AGENT_GC_MAX_ROUNDS } from '@/features/git-submit'
 
 async function runAgentGcCli(options: {
   dryRun?: boolean
@@ -69,13 +72,13 @@ export function registerAgentCommands(program: Command): void {
 
   agent
     .command('gc')
-    .description(`AI 提交 agent loop：最多 ${AGENT_MAX_ROUNDS} 轮直到干净`)
+    .description(`AI 提交 agent loop：最多 ${AGENT_GC_MAX_ROUNDS} 轮直到干净`)
     .option('--dry-run', '不提交不推送')
     .option('--no-pull', '跳过 pull')
     .addOption(new Option('--push', '开启自动推送并记住'))
     .addOption(new Option('--no-push', '关闭自动推送并记住'))
     .option('--json', 'JSON 结果')
-    .option('--max-rounds <n>', '最大轮次', String(AGENT_MAX_ROUNDS))
+    .option('--max-rounds <n>', '最大轮次', String(AGENT_GC_MAX_ROUNDS))
     .action(async (opts) => {
       const { noPush, enable } = await resolveAutoPush({
         push: Boolean(opts.push),
@@ -84,7 +87,7 @@ export function registerAgentCommands(program: Command): void {
         dryRun: Boolean(opts.dryRun),
       })
       if (!opts.json) printAutoPushStatus(enable)
-      const maxRounds = Math.max(1, parseInt(String(opts.maxRounds), 10) || AGENT_MAX_ROUNDS)
+      const maxRounds = Math.max(1, parseInt(String(opts.maxRounds), 10) || AGENT_GC_MAX_ROUNDS)
       await runAgentGcCli({
         dryRun: Boolean(opts.dryRun),
         noPull: !opts.pull,

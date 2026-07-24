@@ -9,8 +9,8 @@ alwaysApply: true
 
 - 前缀 `tkt`；一能力一目录：`src/features/<name>/`
 - **CLI 与 agent 分开**：`tkt gc` 单次流水线；残留/失败重试放 `tkt agent gc`
-- 本地 Agent 在 `src/agent/`（原 `src/ai`）：`client`（SDK）+ `loop`（工作流重试）+ `config`
-- Tool 级 loop 用 SDK：`generateText` + `stopWhen: stepCountIs`（`ToolLoopAgent` 同机制）；工作流残留重试 SDK 没有，自写 `agentLoop`
+- 本地 Agent 在 `src/agent/`：`client`（SDK）+ 通用 `agentLoop` + `config`
+- Tool 级 loop 用 SDK：`stopWhen: stepCountIs`；领域残留重试在各 feature（如 `git-submit/agent-loop`）
 - `createAgentClient()` 必须在 `withCatRun` 外；缺配置先填，再显示「思考中」
 - 用户数据：`~/.config/tkt/<命令名>/`，分文件存，不写进仓库
 
