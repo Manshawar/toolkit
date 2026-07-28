@@ -20,12 +20,13 @@ export type PromptId = keyof typeof PROMPT_CATALOG
 export function promptsRoot(): string {
   const dir = path.dirname(fileURLToPath(import.meta.url))
   // bundled: lib/index.js → ../prompts；源码: src/features/prompts → ../../../prompts
+  // 注意：源码模式下 ../prompts 解析为 dir 自身，须排除
   for (const p of [
-    path.resolve(dir, '../prompts'),
     path.resolve(dir, '../../../prompts'),
+    path.resolve(dir, '../prompts'),
     path.resolve(process.cwd(), 'prompts'),
   ]) {
-    if (fs.existsSync(p)) return p
+    if (p !== dir && fs.existsSync(p)) return p
   }
   return path.resolve(dir, '../prompts')
 }
