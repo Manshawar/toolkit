@@ -30,26 +30,54 @@ npm i @manshawar/tkt -g
 
 ## 配置
 
-```bash
-cp .env.example .env   # 填写 AI_BASE_URL / AI_API_KEY / AI_MODEL
-```
-
-或交互式配置：
+首次使用 AI 功能（`tkt gc` / `tkt report` 等）时，会自动弹出交互式配置。也可手动配置：
 
 ```bash
-tkt config              # 交互填写 AI 地址、Key、模型
+tkt config              # 交互填写 AI 后端与网关配置
 tkt config --show       # 查看当前配置（Key 脱敏）
+tkt config --backend claude      # 切换后端（claude | openai | auto）
+tkt config --backend openai      # 强制自有 OpenAI Compatible 配置
+tkt config ui           # 打开 AI 配置 UI（/setting）
 ```
 
-配置写入 `~/.config/tkt/ai/.env`，一次配置全局生效（也可用 `tkt ui` →「设置」）。
+### AI 后端
+
+支持两种 AI 后端，优先级：`TKT_AI_BACKEND` 环境变量 > 持久化 `AI_BACKEND` > auto 自动探测。
+
+| 后端 | 说明 |
+| --- | --- |
+| **Claude Code** | 复用本机 `claude` CLI 登录态与网关配置，零配置即可用 |
+| **OpenAI Compatible** | 自有网关：需填写 Base URL / API Key / Model |
+| **auto**（推荐） | 有 claude CLI 用 Claude Code，否则回退自有配置 |
+
+auto 模式下 Claude Code 调用失败时，自动回退到自有 OpenAI Compatible 配置，进程内粘滞。
+
+配置写入 `~/.config/tkt/ai/.env`，一次配置全局生效。也可用 `tkt config ui` →「设置」在浏览器中管理。
+
+### Token Plan
+
+用量页支持多 provider 配额查询，UI（`/token-plan`）可切换并「设为默认」。
+
+| provider | 配置 | 说明 |
+| --- | --- | --- |
+| `minimax` | `MINIMAX_API_KEY`（可选 `MINIMAX_API_BASE`） | MiniMax Token Plan · 默认 `https://www.minimaxi.com` |
+| `kimi` | `KIMI_API_KEY`（可选 `KIMI_API_BASE`） | Kimi Code 套餐 · key 形如 `sk-kimi-...`，[kimi.com/code](https://www.kimi.com/code/) 控制台创建 · 默认 `https://api.kimi.com` |
+
+默认 provider：`TKT_PROVIDER` 环境变量 > `~/.config/tkt/usage/prefs.json` 持久化 > `minimax`。
+Key 也可在 `/token-plan` 页面直接填写，存 `~/.config/tkt/usage/.env`（读取时覆盖包内 `.env`），保存后自动刷新，无需重启。
+
+### 数据路径一览
 
 | 数据 | 路径 |
 | --- | --- |
 | 全局 AI | `~/.config/tkt/ai/.env` |
-| 更新检查间隔 | `~/.config/tkt/update/prefs.json`（默认 3 小时） |
+| 更新检查偏好 | `~/.config/tkt/update/prefs.json`（默认 3 小时） |
 | 日报偏好 / 名单 | `~/.config/tkt/report/setting.json` |
 | 日报归档 | `~/.config/tkt/report/history/YYYY-MM-DD.json` |
 | Bench 网关 | `~/.config/tkt/bench/gateway.json` |
+| Usage 偏好 | `~/.config/tkt/usage/prefs.json`（默认 provider） |
+| Usage API Key | `~/.config/tkt/usage/.env`（provider key） |
+| Agent 用量日志 | `~/.config/tkt/usage/agent.jsonl` |
 
 ## 命令
 
@@ -80,6 +108,7 @@ tkt report --role 前端                        # 预设角色
 tkt report --append "联调支付回调=1h"          # 手动追加条目（可多次）
 tkt report --target-hours 10                 # 目标工时下限
 tkt report --day-start 09:00 --day-end 18:00 # 自定义上下班时间
+tkt report --roster                          # 启动时先打开快捷键区
 tkt report --dry-run                         # 只生成，不归档
 tkt report --no-clipboard                    # 不复制到剪贴板
 tkt report --json                            # JSON 输出
@@ -105,14 +134,15 @@ tkt bench ui                                # → /bench
 单端口 Hono 托管 `assets/ui`。默认端口 **38471**（偏门，降低冲突）；占用时自动顺延。有 UI 的命令统一用 **`tkt <cmd> ui`**：
 
 ```bash
-tkt ui                   # → / 导航页（:38471）
-tkt report ui            # → /report
-tkt usage ui             # → /usage
-tkt bench ui             # → /bench
-tkt config ui            # → /setting
+tkt ui                    # → / 导航页（:38471）
+tkt report ui             # → /report
+tkt usage ui              # → /usage
+tkt bench ui              # → /bench
+tkt config ui             # → /setting
 tkt ui --path /report/generate
-tkt report ui --no-open  # 只起服务不弹浏览器
-tkt ui --port 3000       # 强制指定端口
+tkt ui --port 3000        # 强制指定端口
+tkt ui --no-open          # 只起服务不弹浏览器
+tkt ui --no-spa           # 仅 API：不挂载 SPA（前端由 Vite 接管）
 ```
 
 | 命令 | 路由 |
@@ -123,34 +153,22 @@ tkt ui --port 3000       # 强制指定端口
 | `tkt bench ui` | `/bench` |
 | `tkt config ui` | `/setting` |
 
-子页（浏览器内）：`/report/generate`、`/report/history`、`/report/roster`、`/report/prefs` 等。
+子页（浏览器内）：`/token-plan`（Token Plan 配额）、`/report/generate`、`/report/history`、`/report/roster`、`/report/prefs` 等。
 
 API 前缀：`/api/report/*`、`/api/usage/*`、`/api/bench/*`、`/api/setting/*`。
 
-### 开发与打包
-
-```bash
-pnpm ui:dev          # Vite :5173 + Hono :38471（/api 代理），本地联调
-pnpm ui:serve        # 仅 API（tsx watch）
-pnpm web:dev         # 仅 Vite
-pnpm web:build       # → assets/ui/
-pnpm build           # → lib/
-pnpm build:all       # web:build 再 build（发布前）
-```
-
 ### `tkt usage` — Token 用量
 
-实时监控 AI 平台 Token 消耗。
+实时查询 AI 平台 Token Plan 配额。
 
 ```bash
 tkt usage                 # 实时刷新（60s）
 tkt usage --once          # 查一次
 tkt usage -i 30           # 30 秒刷新
-tkt usage -p minimax      # 指定 provider
-tkt usage ui              # → /usage
+tkt usage -p minimax      # 指定 provider（minimax | kimi）
+tkt usage -p kimi         # Kimi Code 套餐
+tkt usage ui              # → /usage（本地 Agent 用量 + Token Plan 双面板）
 ```
-
-需配置 `MINIMAX_API_KEY`（可选 `MINIMAX_API_BASE`）。
 
 ### 其他
 
@@ -166,16 +184,34 @@ tkt usage ui              # → /usage
 
 | 变量 | 用途 |
 | --- | --- |
-| `AI_BASE_URL` | AI 网关地址 |
+| `AI_BASE_URL` | AI 网关地址（OpenAI Compatible） |
 | `AI_API_KEY` | API Key |
 | `AI_MODEL` | 模型名 |
-| `AI_STRUCTURED_OUTPUTS` | 强制开/关 json_schema（`true`/`false`） |
-| `TKT_PROVIDER` | usage 的 provider（默认 minimax） |
+| `AI_STRUCTURED_OUTPUTS` | 强制开/关 json_schema（`true` / `false`） |
+| `TKT_AI_BACKEND` | 强制 AI 后端（`claude` / `openai`；缺省 auto 探测） |
+| `TKT_PROVIDER` | usage 默认 provider（`minimax` / `kimi`；缺省持久化 → `minimax`） |
+| `MINIMAX_API_KEY` | MiniMax Token Plan API Key |
+| `MINIMAX_API_BASE` | MiniMax API 地址（默认 `https://www.minimaxi.com`） |
+| `KIMI_API_KEY` | Kimi Code API Key（`sk-kimi-...`） |
+| `KIMI_API_BASE` | Kimi API 地址（默认 `https://api.kimi.com`） |
+| `TKT_NO_UPDATE` | 设为 `1` 关闭启动时的版本更新提示 |
+| `TKT_GC_PUSH` | git-submit 默认推送开关（`true` / `false`） |
+
+## 开发与打包
+
+```bash
+pnpm ui:dev          # Vite :5173 + Hono :38471（/api 代理），本地联调
+pnpm ui:serve        # 仅 API（tsx watch）
+pnpm web:dev         # 仅 Vite
+pnpm web:build       # → assets/ui/
+pnpm build           # → lib/
+pnpm build:all       # web:build 再 build（发布前）
+```
 
 ## 实现概要
 
 - **CLI**：commander；数据落 `~/.config/tkt/<cmd>/`
-- **Agent**：`src/agent/`（Vercel AI SDK + OpenAI Compatible）；tool 步进用 `stopWhen`，工作流多轮用 `runLoop`
+- **Agent**：`src/agent/`（Vercel AI SDK + Claude Agent SDK）；tool 步进用 `stopWhen`，工作流多轮用 `runLoop`
 - **Feature**：`src/features/<name>/` 按阶段拆目录；跨模块 `@/*` → `src/*`
 - **Prompt**：一律放 `prompts/`，经目录注册后 `loadPrompt(id)` 加载
 - **UI**：单包 SPA（`web/` → `assets/ui/`），Hono 单端口静态 + SPA fallback；业务 API 按 feature mount
