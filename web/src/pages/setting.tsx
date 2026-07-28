@@ -26,6 +26,20 @@ const BACKEND_OPTIONS: Array<{ value: BackendPref; label: string; hint: string }
   { value: 'openai', label: 'OpenAI Compatible', hint: '下面的 Base URL / Key / Model' },
 ]
 
+/** 状态回显按生效 backend 分类：claude → CLI；openai → 网关 base/model */
+function backendStatusText(info: AiSetting | null): string {
+  if (!info) return '…'
+  const prefLabel =
+    BACKEND_OPTIONS.find((o) => o.value === (info.backendPref ?? 'auto'))?.label ?? 'auto'
+  if (info.backend === 'claude') {
+    const cli = info.hasClaude ? '本机 claude CLI，复用登录态，无需网关' : '⚠ 未检测到 claude CLI'
+    return `选中：${prefLabel} · 当前生效：Claude Code（${cli}）`
+  }
+  const base = info.baseUrl || '未配置 Base URL'
+  const model = info.model || '未配置 Model'
+  return `选中：${prefLabel} · 当前生效：OpenAI Compatible（${base} · ${model}）`
+}
+
 type UpdatePrefs = {
   checkIntervalHours: number
 }
@@ -57,12 +71,21 @@ export function SettingPage() {
       setApiKey('')
       setBackendPref(data.backendPref ?? 'auto')
       setBackendMsg('')
-      setOk(Boolean(data.baseUrl && data.model && data.hasKey))
-      setMsg(
-        data.baseUrl && data.model && data.hasKey
-          ? 'AI 配置已就绪'
-          : '请填写 Base URL / API Key / Model',
-      )
+      if (data.backend === 'claude') {
+        setOk(Boolean(data.hasClaude))
+        setMsg(
+          data.hasClaude
+            ? 'Claude Code 就绪（本机 claude CLI）'
+            : '未检测到 claude CLI，请安装或切回 openai',
+        )
+      } else {
+        setOk(Boolean(data.baseUrl && data.model && data.hasKey))
+        setMsg(
+          data.baseUrl && data.model && data.hasKey
+            ? 'AI 配置已就绪'
+            : '请填写 Base URL / API Key / Model',
+        )
+      }
     } catch (e) {
       setOk(false)
       setMsg(e instanceof Error ? e.message : String(e))
@@ -190,29 +213,44 @@ export function SettingPage() {
           <div className="space-y-1.5">
             <Label>AI Backend</Label>
             <div className="flex flex-wrap gap-2">
-              {BACKEND_OPTIONS.map((o) => (
-                <Button
-                  key={o.value}
-                  variant={backendPref === o.value ? 'default' : 'secondary'}
-                  size="sm"
-                  disabled={backendBusy || info?.backendSource === 'env'}
-                  title={o.hint}
-                  onClick={() => void saveBackend(o.value)}
-                >
-                  {o.label}
-                </Button>
-              ))}
+              {BACKEND_OPTIONS.map((o) => {
+                const selected = backendPref === o.value
+                return (
+                  <Button
+                    key={o.value}
+                    variant={selected ? 'default' : 'secondary'}
+                    size="sm"
+                    disabled={backendBusy || info?.backendSource === 'env'}
+                    title={o.hint}
+                    aria-pressed={selected}
+                    className={selected ? 'ring-2 ring-primary/40 ring-offset-1' : ''}
+                    onClick={() => void saveBackend(o.value)}
+                  >
+                    {selected ? '✓ ' : ''}
+                    {o.label}
+                  </Button>
+                )
+              })}
             </div>
             <p className="text-xs text-muted">
               {info?.backendSource === 'env'
                 ? '已被 TKT_AI_BACKEND 环境变量强制，此处切换不生效'
-                : `当前生效：${
-                    info?.backend === 'claude' ? 'Claude Code' : 'OpenAI Compatible'
-                  }${info?.hasClaude ? '' : ' · 未检测到 claude CLI'}`}
+                : backendStatusText(info)}
             </p>
             {backendMsg ? <p className="text-xs text-destructive">{backendMsg}</p> : null}
           </div>
 
+          <div
+            className={`space-y-4 ${info?.backend === 'claude' ? 'opacity-60' : ''}`}
+          >
+            <div className="space-y-0.5 border-t border-border/70 pt-3">
+              <Label>OpenAI Compatible 网关</Label>
+              <p className="text-xs text-muted">
+                {info?.backend === 'claude'
+                  ? '当前未生效（backend = Claude Code）；保存后作为 openai / auto 回退配置'
+                  : '当前生效的网关配置'}
+              </p>
+            </div>
           <div className="space-y-1.5">
             <Label>Base URL</Label>
             <Input
@@ -252,6 +290,7 @@ export function SettingPage() {
             >
               {msg}
             </p>
+          </div>
           </div>
         </div>
       </Card>
