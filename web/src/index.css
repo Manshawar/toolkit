@@ -21,6 +21,12 @@
   --radius-lg: 1rem;
   --radius-md: 0.625rem;
   --radius-sm: 0.375rem;
+
+  /* 布局尺寸：全局唯一来源，改这里所有页面同步 */
+  --container-shell: 1200px; /* 页面外壳最大宽度 max-w-shell */
+  --container-sidebar: 15rem; /* 工具侧栏宽度 w-sidebar */
+  --container-sidebar-collapsed: 3.75rem; /* 收起后的侧栏宽度 */
+  --spacing-header: 4rem; /* 顶栏高度 h-header / top-header */
 }
 
 @layer base {
@@ -46,6 +52,25 @@
 @layer utilities {
   .font-display {
     font-family: var(--font-display);
+  }
+  /* 页面骨架：外壳 / 侧栏 / 内容间距，统一在此维护 */
+  .shell-inner {
+    @apply mx-auto w-full max-w-shell px-5 sm:px-8 lg:px-10;
+  }
+  .shell-body {
+    @apply grid items-start gap-x-8 gap-y-6 md:grid-cols-[var(--container-sidebar)_minmax(0,1fr)];
+  }
+  .shell-body-collapsed {
+    @apply md:grid-cols-[var(--container-sidebar-collapsed)_minmax(0,1fr)];
+  }
+  .page-main {
+    @apply min-w-0 pb-24 pt-8 sm:pt-10;
+  }
+  .page-stack {
+    @apply space-y-10;
+  }
+  .page-stack-tight {
+    @apply space-y-6;
   }
   .animate-rise {
     animation: rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;

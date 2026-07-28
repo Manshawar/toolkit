@@ -155,7 +155,7 @@ export function TokenPlanPage() {
   }, [])
 
   return (
-    <div className="mx-auto max-w-2xl space-y-10">
+    <div className="page-stack">
       <header className="space-y-1">
         <h1 className="font-display text-2xl font-bold tracking-tight">Token Plan</h1>
         <p className="text-sm text-muted">云端套餐配额：切换 provider，或把当前项设为默认。</p>

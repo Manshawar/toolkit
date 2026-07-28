@@ -185,7 +185,7 @@ export function SettingPage() {
   }, [])
 
   return (
-    <div className="animate-rise mx-auto max-w-xl space-y-6">
+    <div className="animate-rise page-stack-tight">
       <header className="space-y-2">
         <h1 className="font-display text-2xl font-bold tracking-tight sm:text-[1.75rem]">
           全局配置

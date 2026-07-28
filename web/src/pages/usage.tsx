@@ -68,7 +68,7 @@ export function UsagePage() {
   const maxToolTokens = Math.max(1, ...(agent?.tools.map((t) => t.totalTokens) || [1]))
 
   return (
-    <div className="mx-auto max-w-2xl space-y-10">
+    <div className="page-stack">
       <header className="space-y-1">
         <h1 className="font-display text-2xl font-bold tracking-tight">用量</h1>
         <p className="text-sm text-muted">本地 Agent 各工具消耗。</p>
