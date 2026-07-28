@@ -2,7 +2,7 @@
  * Setting API：全局 AI 配置 + CLI 更新检查偏好
  */
 import { Hono } from 'hono'
-import { getAiConfigView, saveAiConfigFields, aiEnvPath } from '@/agent'
+import { getAiConfigView, saveAiBackend, saveAiConfigFields, aiEnvPath } from '@/agent'
 import { loadUpdatePrefs, saveUpdatePrefs } from '@/core/update-check'
 
 /** API：挂在 /api/setting */
@@ -17,12 +17,28 @@ export function createSettingApiRoutes(): Hono {
         baseUrl?: string
         apiKey?: string
         model?: string
+        backend?: string
       }
-      saveAiConfigFields({
-        baseUrl: typeof body.baseUrl === 'string' ? body.baseUrl : undefined,
-        apiKey: typeof body.apiKey === 'string' ? body.apiKey : undefined,
-        model: typeof body.model === 'string' ? body.model : undefined,
-      })
+      // backend 与网关字段解耦：只切 backend 时不要求网关三项齐全
+      if (body.backend !== undefined) {
+        const b = String(body.backend).trim().toLowerCase()
+        if (b !== 'claude' && b !== 'openai' && b !== 'auto') {
+          return c.json({ error: `backend 只支持 claude | openai | auto，收到: ${body.backend}` }, 400)
+        }
+        saveAiBackend(b)
+      }
+      const hasGatewayFields =
+        body.baseUrl !== undefined || body.apiKey !== undefined || body.model !== undefined
+      if (hasGatewayFields) {
+        saveAiConfigFields({
+          baseUrl: typeof body.baseUrl === 'string' ? body.baseUrl : undefined,
+          apiKey: typeof body.apiKey === 'string' ? body.apiKey : undefined,
+          model: typeof body.model === 'string' ? body.model : undefined,
+        })
+      }
+      if (body.backend === undefined && !hasGatewayFields) {
+        return c.json({ error: '空请求：需 backend 或 baseUrl/apiKey/model 至少一项' }, 400)
+      }
       return c.json({
         ok: true,
         saved: aiEnvPath(),

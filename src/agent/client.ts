@@ -7,6 +7,7 @@
  * 工作流级 loop（如 gc 残留文件）：SDK 没有，见 `./loop.ts`
  */
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
+import chalk from 'chalk'
 import {
   extractJsonMiddleware,
   generateText,
@@ -19,7 +20,9 @@ import {
   type ToolSet,
 } from 'ai'
 import type { z } from 'zod'
-import { appendAgentUsage } from '@/features/usage/agent'
+import { forcedAiBackend, hintAiBackend, resolveAiBackend } from './backend'
+import { createClaudeAgentClient } from './claude'
+import { extractJsonObject, recordUsage } from './shared'
 import {
   interceptAiConfig,
   isAiConfigError,
@@ -36,6 +39,7 @@ export {
   showAiConfig,
   getAiConfigView,
   saveAiConfigFields,
+  saveAiBackend,
   aiEnvPath,
   resetAiConfigCache,
   isAiConfigError,
@@ -57,41 +61,12 @@ export interface GenerateObjectOptions<SCHEMA extends z.ZodType> {
   usageTool?: string
 }
 
-function recordUsage(
-  tool: string | undefined,
-  model: string | undefined,
-  usage: LanguageModelUsage | undefined,
-): void {
-  if (!tool || !usage) return
-  const inputTokens = usage.inputTokens ?? 0
-  const outputTokens = usage.outputTokens ?? 0
-  const totalTokens = usage.totalTokens ?? inputTokens + outputTokens
-  if (inputTokens <= 0 && outputTokens <= 0 && totalTokens <= 0) return
-  appendAgentUsage({ tool, model, inputTokens, outputTokens, totalTokens })
-}
-
 export interface AgentClient {
   generateObject<SCHEMA extends z.ZodType>(
     opts: GenerateObjectOptions<SCHEMA>,
   ): Promise<z.infer<SCHEMA>>
-  getModel(): Promise<LanguageModel>
-}
-
-/** 从模型原文里抠出可 JSON.parse 的对象文本 */
-function extractJsonObject(text: string): string | null {
-  let t = text.trim()
-  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i)
-  if (fence?.[1]) t = fence[1].trim()
-  const start = t.indexOf('{')
-  const end = t.lastIndexOf('}')
-  if (start < 0 || end <= start) return null
-  t = t.slice(start, end + 1)
-  try {
-    JSON.parse(t)
-    return t
-  } catch {
-    return null
-  }
+  /** Claude backend 无 LanguageModel，返回 undefined */
+  getModel(): Promise<LanguageModel | undefined>
 }
 
 function formatNoObjectError(err: InstanceType<typeof NoObjectGeneratedError>): string {
@@ -136,10 +111,15 @@ export function supportsStructuredOutputs(model: string): boolean {
   return true
 }
 
-export async function createAgentClient(config?: AiConfig): Promise<AgentClient> {
+/**
+ * OpenAI Compatible backend（自有配置 AI_BASE_URL / AI_API_KEY / AI_MODEL）。
+ * 外部传入 config 时跳过交互拦截。
+ */
+export async function createOpenAiAgentClient(config?: AiConfig): Promise<AgentClient> {
   async function resolve(forcePrompt = false) {
     if (forcePrompt) resetAiConfigCache()
     const cfg = config ?? (await interceptAiConfig())
+    hintAiBackend('openai', cfg.model)
     const baseURL = normalizeOpenAiBaseUrl(cfg.baseUrl)
     const provider = createOpenAICompatible({
       name: 'tkt',
@@ -234,6 +214,46 @@ export async function createAgentClient(config?: AiConfig): Promise<AgentClient>
           return attempt(true)
         }
         throw e
+      }
+    },
+  }
+}
+
+/**
+ * 默认入口：backend 解析（见 ./backend）。
+ * - 本机有 claude CLI → Claude Code（复用其登录态 / 第三方网关，零配置）
+ * - 否则 → 自有 OpenAI Compatible 配置
+ * - 外部传入 config → 强制 OpenAI Compatible（不抢 backend）
+ *
+ * auto 模式下 Claude 调用失败（未登录 / 网关挂 / 老 CLI）→ 提示并回退自有配置，
+ * 本进程内粘滞，后续调用直接走 openai。
+ */
+export async function createAgentClient(config?: AiConfig): Promise<AgentClient> {
+  if (config) return createOpenAiAgentClient(config)
+
+  if (resolveAiBackend() === 'openai') return createOpenAiAgentClient()
+
+  hintAiBackend('claude')
+  const claude = createClaudeAgentClient()
+  // 显式 TKT_AI_BACKEND=claude：失败直接抛，不偷偷换 backend
+  if (forcedAiBackend()) return claude
+
+  let fallback: AgentClient | null = null
+  return {
+    getModel: () => (fallback ? fallback.getModel() : claude.getModel()),
+    async generateObject(opts) {
+      if (fallback) return fallback.generateObject(opts)
+      try {
+        return await claude.generateObject(opts)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        console.error(
+          chalk.yellow(
+            `→ Claude Code 调用失败（${msg.slice(0, 120)}），回退自有 OpenAI Compatible 配置`,
+          ),
+        )
+        fallback = await createOpenAiAgentClient()
+        return fallback.generateObject(opts)
       }
     },
   }

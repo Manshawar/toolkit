@@ -26,7 +26,7 @@ import { registerAgentCommands } from './features/agent'
 import { registerBenchCommands } from './features/bench'
 import { registerReportCommands } from './features/report'
 import { runPromptList, runPromptShow } from './features/prompts'
-import { reconfigureAiConfig, showAiConfig } from './agent'
+import { reconfigureAiConfig, saveAiBackend, showAiConfig } from './agent'
 import { interceptCliUpdate } from './core/update-check'
 import { startUiServer, registerUiSubcommand, DEFAULT_PORT } from './server'
 
@@ -60,8 +60,19 @@ async function main() {
     .command('config')
     .description('重新填写 AI 配置（有值覆盖，空回车保留）')
     .option('--show', '只查看当前配置（Key 脱敏）')
+    .option('--backend <claude|openai|auto>', '切换 AI backend（持久化；auto = 自动探测）')
     .action(async (opts) => {
       try {
+        if (opts.backend !== undefined) {
+          const b = String(opts.backend).trim().toLowerCase()
+          if (b !== 'claude' && b !== 'openai' && b !== 'auto') {
+            throw new Error(`--backend 只支持 claude | openai | auto，收到: ${opts.backend}`)
+          }
+          saveAiBackend(b)
+          console.log(`backend 已切换 → ${b}${b === 'auto' ? '（自动探测）' : ''}`)
+          if (opts.show) showAiConfig()
+          return
+        }
         if (opts.show) showAiConfig()
         else await reconfigureAiConfig()
       } catch (e) {

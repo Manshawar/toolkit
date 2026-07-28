@@ -9,6 +9,13 @@ import * as path from 'path'
 import { config as loadDotenv } from 'dotenv'
 import * as p from '@clack/prompts'
 import { ensureDataDir, packageRoot } from '@/core/paths'
+import {
+  aiBackendSource,
+  forcedAiBackend,
+  hasClaudeCli,
+  resetAiBackendCache,
+  resolveAiBackend,
+} from './backend'
 
 export interface AiConfig {
   baseUrl: string
@@ -215,20 +222,86 @@ async function promptMissing(partial: Partial<AiConfig>): Promise<AiConfig> {
 }
 
 /**
- * `tkt config`：重新填写。有输入则改，空回车保留原值。
+ * 持久化 backend 偏好（写入 ~/.config/tkt/ai/.env 的 AI_BACKEND）。
+ * `auto` = 删除该键（回退自动探测）。优先级低于 TKT_AI_BACKEND 环境变量。
  */
-export async function reconfigureAiConfig(): Promise<AiConfig> {
+export function saveAiBackend(pref: 'claude' | 'openai' | 'auto'): void {
+  const file = aiEnvPath()
+  const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split(/\r?\n/) : []
+  const filtered = lines.filter((l) => !/^\s*AI_BACKEND\s*=/.test(l))
+  while (filtered.length && filtered[filtered.length - 1].trim() === '') filtered.pop()
+  if (pref !== 'auto') {
+    if (filtered.length) filtered.push('')
+    filtered.push(`AI_BACKEND=${pref}`, '')
+  }
+  fs.mkdirSync(path.dirname(file), { recursive: true })
+  fs.writeFileSync(file, filtered.join('\n'), 'utf8')
+  if (pref === 'auto') delete process.env.AI_BACKEND
+  else process.env.AI_BACKEND = pref
+  resetAiBackendCache()
+}
+
+/**
+ * `tkt config`：先选 backend，再按需填网关。
+ * - claude：复用本机 claude CLI 登录态，无需网关配置，直接返回 null
+ * - openai / auto：继续填写三项（auto 时作 Claude 不可用时的回退）
+ */
+export async function reconfigureAiConfig(): Promise<AiConfig | null> {
   resetAiConfigCache()
+  prepareStdinForPrompt()
+
+  if (!process.stdin.isTTY) {
+    throw new Error(`非 TTY 环境。可用 \`tkt config --backend <claude|openai|auto>\`，或写入 ${aiEnvPath()}`)
+  }
+
+  const cur = forcedAiBackend() ?? 'auto'
+  const next = await p.select({
+    message: 'AI backend',
+    initialValue: cur,
+    options: [
+      {
+        value: 'auto' as const,
+        label: 'auto（推荐）',
+        hint: '有 claude CLI 用 Claude Code，否则自有配置',
+      },
+      {
+        value: 'claude' as const,
+        label: 'Claude Code',
+        hint: hasClaudeCli() ? '本机 claude CLI，零配置' : '未检测到 claude CLI',
+      },
+      {
+        value: 'openai' as const,
+        label: 'OpenAI Compatible',
+        hint: '下面的 Base URL / Key / Model',
+      },
+    ],
+  })
+  abortIfCancel(next)
+  const pref = next as 'claude' | 'openai' | 'auto'
+  saveAiBackend(pref)
+
+  if (pref === 'claude') {
+    p.outro('backend = claude：复用本机 claude CLI 登录态 / 网关，无需网关配置')
+    return null
+  }
+
   const partial = readFromEnv()
   return promptAiFields(partial, {
     keepExisting: true,
-    title: '重新配置 AI（空回车保留原值）',
+    title:
+      pref === 'auto'
+        ? '配置 OpenAI Compatible 回退（空回车保留原值）'
+        : '重新配置 AI（空回车保留原值）',
   })
 }
 
 /** 打印当前配置（Key 脱敏） */
 export function showAiConfig(): void {
   const partial = readFromEnv()
+  const src = aiBackendSource()
+  const srcText =
+    src === 'env' ? 'TKT_AI_BACKEND 强制' : src === 'config' ? 'AI_BACKEND 配置' : 'auto 探测'
+  console.log(`backend: ${resolveAiBackend()}（${srcText}；claude CLI ${hasClaudeCli() ? '可用' : '未检测到'}）`)
   console.log(`env: ${aiEnvPath()}`)
   const pkg = packageEnvPath()
   if (fs.existsSync(pkg)) console.log(`also: ${pkg}（较低优先级）`)
@@ -239,6 +312,10 @@ export function showAiConfig(): void {
 
 /** UI / API：查看配置（Key 脱敏） */
 export function getAiConfigView(): {
+  backend: 'claude' | 'openai'
+  backendSource: 'env' | 'config' | 'auto'
+  backendPref: 'claude' | 'openai' | 'auto'
+  hasClaude: boolean
   envPath: string
   packageEnv?: string
   baseUrl?: string
@@ -249,6 +326,10 @@ export function getAiConfigView(): {
   const partial = readFromEnv()
   const pkg = packageEnvPath()
   return {
+    backend: resolveAiBackend(),
+    backendSource: aiBackendSource(),
+    backendPref: forcedAiBackend() ?? 'auto',
+    hasClaude: hasClaudeCli(),
     envPath: aiEnvPath(),
     packageEnv: fs.existsSync(pkg) ? pkg : undefined,
     baseUrl: partial.baseUrl,

@@ -10,7 +10,8 @@ import type { GatherResult } from '@/features/report/types'
 export type ToolScenario = 'git-submit.commit-plan' | 'report.daily'
 
 export interface ToolLoadContext {
-  model: LanguageModel
+  /** Claude backend 无 LanguageModel，为 undefined（当前 tools 均未使用） */
+  model?: LanguageModel
   /** git-submit 场景需要 */
   diff?: DiffInfo
   cwd?: string
