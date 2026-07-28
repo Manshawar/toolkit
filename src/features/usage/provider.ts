@@ -1,4 +1,5 @@
-import { requireEnv, getEnv, getProviderId } from '@/core/env'
+import { requireEnv, getEnv } from '@/core/env'
+import { loadUsagePrefs, maskSecret, reloadUsageEnv } from './prefs'
 import type { QuotaWindow, UsageModel, UsageProvider, UsageSnapshot } from './types'
 
 interface MiniMaxModelRemain {
@@ -70,6 +71,7 @@ function mapModel(item: MiniMaxModelRemain): UsageModel {
 }
 
 function createMinimax(): UsageProvider {
+  reloadUsageEnv()
   const apiKey = requireEnv('MINIMAX_API_KEY')
   const base = getEnv('MINIMAX_API_BASE', 'https://www.minimaxi.com').replace(/\/$/, '')
 
@@ -106,12 +108,196 @@ function createMinimax(): UsageProvider {
   }
 }
 
+/* ---------------- Kimi Code（GET https://api.kimi.com/coding/v1/usages） ---------------- */
+
+/** 配额字段值可能是数字或字符串 */
+interface KimiQuota {
+  used?: string | number
+  limit?: string | number
+  remaining?: string | number
+  /** ISO 字符串或 epoch（秒 / 毫秒） */
+  resetTime?: string | number
+}
+
+interface KimiLimitItem {
+  window?: { duration?: number; timeUnit?: string }
+  detail?: KimiQuota
+}
+
+interface KimiUsagesResponse {
+  /** 周配额（7 天滚动窗口） */
+  usage?: KimiQuota
+  /** 滚动窗口限频；300 分钟（5 小时）条目为会话配额 */
+  limits?: KimiLimitItem[]
+  user?: { membership?: { level?: string } }
+  parallel?: { limit?: number }
+}
+
+function num(v: string | number | undefined): number | null {
+  if (v == null) return null
+  const n = typeof v === 'number' ? v : parseFloat(v)
+  return Number.isFinite(n) ? n : null
+}
+
+function windowMinutes(w?: { duration?: number; timeUnit?: string }): number | null {
+  const duration = num(w?.duration)
+  if (duration == null) return null
+  switch (w?.timeUnit) {
+    case 'TIME_UNIT_SECOND':
+      return duration / 60
+    case 'TIME_UNIT_MINUTE':
+      return duration
+    case 'TIME_UNIT_HOUR':
+      return duration * 60
+    case 'TIME_UNIT_DAY':
+      return duration * 1440
+    default:
+      return null
+  }
+}
+
+function parseResetTime(raw: string | number | undefined): Date | undefined {
+  if (raw == null) return undefined
+  if (typeof raw === 'string') {
+    const ms = Date.parse(raw)
+    return Number.isNaN(ms) ? undefined : new Date(ms)
+  }
+  const n = num(raw)
+  if (n == null) return undefined
+  return new Date(n > 1e12 ? n : n * 1000)
+}
+
+function kimiWindow(label: string, q: KimiQuota | undefined): QuotaWindow | null {
+  if (!q) return null
+  const limit = num(q.limit)
+  if (limit == null || limit <= 0) return null
+  const used = num(q.used)
+  const remaining = num(q.remaining)
+  const remainingPercent =
+    used != null
+      ? (1 - used / limit) * 100
+      : remaining != null
+        ? (remaining / limit) * 100
+        : null
+  if (remainingPercent == null) return null
+  const resetAt = parseResetTime(q.resetTime)
+  return {
+    label,
+    remainingPercent: Math.max(0, Math.min(100, remainingPercent)),
+    remainsMs: resetAt ? Math.max(0, resetAt.getTime() - Date.now()) : undefined,
+    resetAt,
+    used: used ?? undefined,
+    total: limit,
+  }
+}
+
+/** limits[] 里挑 5 小时（300 分钟）会话窗口；无标注则取第一个带 detail 的 */
+function pickSessionDetail(limits: KimiLimitItem[]): KimiQuota | undefined {
+  let first: KimiQuota | undefined
+  for (const item of limits) {
+    if (!item.detail) continue
+    if (!first) first = item.detail
+    const minutes = windowMinutes(item.window)
+    if (minutes != null && Math.abs(minutes - 300) < 1) return item.detail
+  }
+  return first
+}
+
+/** "LEVEL_INTERMEDIATE" → "Intermediate" */
+function planLabel(level: string | undefined): string | undefined {
+  if (!level) return undefined
+  return level
+    .replace(/^LEVEL_/, '')
+    .toLowerCase()
+    .replace(/(^|_)(\w)/g, (_m, sep: string, c: string) => (sep === '_' ? ' ' : '') + c.toUpperCase())
+}
+
+function createKimi(): UsageProvider {
+  reloadUsageEnv()
+  const apiKey = requireEnv('KIMI_API_KEY')
+  const base = getEnv('KIMI_API_BASE', 'https://api.kimi.com').replace(/\/$/, '')
+
+  return {
+    id: 'kimi',
+    displayName: 'Kimi Code Token Plan',
+    async fetchUsage(): Promise<UsageSnapshot> {
+      const res = await fetch(`${base}/coding/v1/usages`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          Accept: 'application/json',
+        },
+      })
+      if (!res.ok) throw new Error(`Kimi HTTP ${res.status}: ${res.statusText}`)
+
+      const data = (await res.json()) as KimiUsagesResponse
+      const windows = [
+        kimiWindow('5 小时窗口', pickSessionDetail(data.limits ?? [])),
+        kimiWindow('本周', data.usage),
+      ].filter((w): w is QuotaWindow => w != null)
+      if (!windows.length) throw new Error('Kimi 返回空用量数据')
+
+      const meta: Record<string, string> = {}
+      const plan = planLabel(data.user?.membership?.level)
+      if (plan) meta.plan = plan
+      const parallel = num(data.parallel?.limit)
+      if (parallel != null) meta.parallel = String(parallel)
+
+      return {
+        provider: 'kimi',
+        displayName: 'Kimi Code Token Plan',
+        fetchedAt: new Date(),
+        models: [
+          {
+            name: 'Kimi Code',
+            windows,
+            meta: Object.keys(meta).length ? meta : undefined,
+          },
+        ],
+      }
+    },
+  }
+}
+
 const factories: Record<string, () => UsageProvider> = {
   minimax: createMinimax,
+  kimi: createKimi,
+}
+
+/** provider 目录：id / 展示名 / 所需环境变量（UI 列表 + health 用） */
+export interface ProviderInfo {
+  id: string
+  displayName: string
+  keyEnv: string
+  hasKey: boolean
+  apiKeyMasked?: string
+}
+
+export const PROVIDER_CATALOG: Array<Omit<ProviderInfo, 'hasKey' | 'apiKeyMasked'>> = [
+  { id: 'minimax', displayName: 'MiniMax Token Plan', keyEnv: 'MINIMAX_API_KEY' },
+  { id: 'kimi', displayName: 'Kimi Code Token Plan', keyEnv: 'KIMI_API_KEY' },
+]
+
+export function listProviders(): ProviderInfo[] {
+  reloadUsageEnv()
+  return PROVIDER_CATALOG.map((p) => {
+    const key = getEnv(p.keyEnv)
+    return { ...p, hasKey: Boolean(key), apiKeyMasked: key ? maskSecret(key) : undefined }
+  })
+}
+
+/** 默认 provider：TKT_PROVIDER 环境变量（含用户级 usage/.env）> 持久化 prefs > minimax */
+export function defaultProviderId(): string {
+  reloadUsageEnv()
+  const env = getEnv('TKT_PROVIDER')
+  if (env) return env.toLowerCase()
+  const pref = loadUsagePrefs().defaultProvider
+  if (pref && factories[pref.toLowerCase()]) return pref.toLowerCase()
+  return 'minimax'
 }
 
 export function resolveProvider(id?: string): UsageProvider {
-  const providerId = (id || getProviderId()).toLowerCase()
+  const providerId = (id || defaultProviderId()).toLowerCase()
   const factory = factories[providerId]
   if (!factory) {
     throw new Error(

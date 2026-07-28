@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+import { defaultProviderId } from './provider'
 import type { QuotaWindow, UsageProvider, UsageSnapshot } from './types'
 import { formatDuration } from './format'
 
@@ -37,7 +38,7 @@ function renderWindow(w: QuotaWindow): string[] {
 function renderSnapshot(
   snapshot: UsageSnapshot | null,
   error: Error | null,
-  opts: { nextInMs: number; intervalMs: number; once?: boolean },
+  opts: { nextInMs: number; intervalMs: number; once?: boolean; isDefault?: boolean },
 ): string {
   const width = 56
   const rule = (c: string) => chalk.cyan(c.repeat(width))
@@ -47,6 +48,7 @@ function renderSnapshot(
     chalk.bold.cyan('  tkt usage') +
       chalk.dim(' · ') +
       chalk.white(snapshot?.displayName || '…') +
+      (opts.isDefault ? chalk.dim('（默认）') : '') +
       (opts.once ? '' : chalk.dim(` · 每 ${Math.round(opts.intervalMs / 1000)}s 刷新`)),
   )
 
@@ -97,11 +99,17 @@ export async function runOnce(provider: UsageProvider) {
   const snapshot = await provider.fetchUsage()
   paintedLines = 0
   process.stdout.write(
-    renderSnapshot(snapshot, null, { nextInMs: 0, intervalMs: 0, once: true }) + '\n',
+    renderSnapshot(snapshot, null, {
+      nextInMs: 0,
+      intervalMs: 0,
+      once: true,
+      isDefault: provider.id === defaultProviderId(),
+    }) + '\n',
   )
 }
 
 export async function runWatch(provider: UsageProvider, intervalMs: number) {
+  const isDefault = provider.id === defaultProviderId()
   let snapshot: UsageSnapshot | null = null
   let error: Error | null = null
   let nextFetchAt = 0
@@ -134,6 +142,7 @@ export async function runWatch(provider: UsageProvider, intervalMs: number) {
       renderSnapshot(snapshot, error, {
         nextInMs: nextFetchAt - Date.now(),
         intervalMs,
+        isDefault,
       }),
     )
     await new Promise<void>((r) => setTimeout(r, 1000))
