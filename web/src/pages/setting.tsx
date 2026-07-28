@@ -6,6 +6,10 @@ import { Label } from '@web/components/ui/label'
 import { fetchJson } from '@web/lib/api'
 
 type AiSetting = {
+  backend?: 'claude' | 'openai'
+  backendSource?: 'env' | 'config' | 'auto'
+  backendPref?: 'claude' | 'openai' | 'auto'
+  hasClaude?: boolean
   envPath: string
   packageEnv?: string
   baseUrl?: string
@@ -13,6 +17,14 @@ type AiSetting = {
   hasKey?: boolean
   model?: string
 }
+
+type BackendPref = 'claude' | 'openai' | 'auto'
+
+const BACKEND_OPTIONS: Array<{ value: BackendPref; label: string; hint: string }> = [
+  { value: 'auto', label: 'auto', hint: '有 claude CLI 用 Claude Code，否则自有配置' },
+  { value: 'claude', label: 'Claude Code', hint: '本机 claude CLI，零配置' },
+  { value: 'openai', label: 'OpenAI Compatible', hint: '下面的 Base URL / Key / Model' },
+]
 
 type UpdatePrefs = {
   checkIntervalHours: number
@@ -32,6 +44,10 @@ export function SettingPage() {
   const [updateOk, setUpdateOk] = useState(false)
   const [updateBusy, setUpdateBusy] = useState(false)
 
+  const [backendPref, setBackendPref] = useState<BackendPref>('auto')
+  const [backendMsg, setBackendMsg] = useState('')
+  const [backendBusy, setBackendBusy] = useState(false)
+
   async function load() {
     try {
       const data = await fetchJson<AiSetting>('/api/setting/ai')
@@ -39,6 +55,8 @@ export function SettingPage() {
       setBaseUrl(data.baseUrl || '')
       setModel(data.model || '')
       setApiKey('')
+      setBackendPref(data.backendPref ?? 'auto')
+      setBackendMsg('')
       setOk(Boolean(data.baseUrl && data.model && data.hasKey))
       setMsg(
         data.baseUrl && data.model && data.hasKey
@@ -88,6 +106,25 @@ export function SettingPage() {
       setMsg(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function saveBackend(pref: BackendPref) {
+    setBackendPref(pref)
+    setBackendBusy(true)
+    setBackendMsg('保存中…')
+    try {
+      await fetchJson<AiSetting>('/api/setting/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ backend: pref }),
+      })
+      setBackendMsg('')
+      await load()
+    } catch (e) {
+      setBackendMsg(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBackendBusy(false)
     }
   }
 
@@ -150,6 +187,32 @@ export function SettingPage() {
         </CardHeader>
 
         <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>AI Backend</Label>
+            <div className="flex flex-wrap gap-2">
+              {BACKEND_OPTIONS.map((o) => (
+                <Button
+                  key={o.value}
+                  variant={backendPref === o.value ? 'default' : 'secondary'}
+                  size="sm"
+                  disabled={backendBusy || info?.backendSource === 'env'}
+                  title={o.hint}
+                  onClick={() => void saveBackend(o.value)}
+                >
+                  {o.label}
+                </Button>
+              ))}
+            </div>
+            <p className="text-xs text-muted">
+              {info?.backendSource === 'env'
+                ? '已被 TKT_AI_BACKEND 环境变量强制，此处切换不生效'
+                : `当前生效：${
+                    info?.backend === 'claude' ? 'Claude Code' : 'OpenAI Compatible'
+                  }${info?.hasClaude ? '' : ' · 未检测到 claude CLI'}`}
+            </p>
+            {backendMsg ? <p className="text-xs text-destructive">{backendMsg}</p> : null}
+          </div>
+
           <div className="space-y-1.5">
             <Label>Base URL</Label>
             <Input

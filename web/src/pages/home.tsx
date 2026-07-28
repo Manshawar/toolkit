@@ -13,8 +13,15 @@ export const FEATURE_ROUTES = [
     href: '/usage',
     label: '用量',
     title: '用量',
-    desc: 'Agent 各工具日/周/月/年消耗，以及 Token Plan 配额。',
+    desc: 'Agent 各工具日/周/月/年消耗。',
     hint: 'Usage',
+  },
+  {
+    href: '/token-plan',
+    label: '套餐',
+    title: 'Token Plan',
+    desc: '云端套餐配额：MiniMax / Kimi，切换 provider 或设默认。',
+    hint: 'Plan',
   },
   {
     href: '/bench',

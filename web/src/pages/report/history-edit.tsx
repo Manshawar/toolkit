@@ -6,26 +6,9 @@ import { Input } from '@web/components/ui/input'
 import { Label } from '@web/components/ui/label'
 import { fetchJson } from '@web/lib/api'
 import { ReportLayout } from '@web/pages/report/layout'
+import { formatDaily } from '@web/pages/report/daily-text'
 import { PieChart } from '@web/pages/report/pie'
 import type { ReportItem, ReportRecord } from '@web/pages/report/types'
-
-/** 与后端 deliver.formatDaily 对齐，供粘贴用工时表 */
-function halfHour(n: number): number {
-  return Math.min(4, Math.max(0.5, Math.round(n * 2) / 2))
-}
-
-function formatDaily(items: ReportItem[]): string {
-  return items
-    .map((it, i) => {
-      const h = halfHour(Number(it.hours) || 0.5)
-      const hs = Number.isInteger(h) ? String(h) : h.toFixed(1)
-      const text = String(it.text || '')
-        .trim()
-        .replace(/[。.]+$/, '')
-      return `${i + 1}. 【${String(it.project || '').trim()}】${text}。- ${hs}小时`
-    })
-    .join('\n')
-}
 
 export function ReportHistoryEditPage() {
   const { date: dateParam = '' } = useParams<{ date: string }>()

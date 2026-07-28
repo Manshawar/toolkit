@@ -9,6 +9,7 @@ import { ReportOverviewPage } from '@web/pages/report/overview'
 import { ReportPrefsPage } from '@web/pages/report/prefs'
 import { ReportRosterPage } from '@web/pages/report/roster'
 import { SettingPage } from '@web/pages/setting'
+import { TokenPlanPage } from '@web/pages/token-plan'
 import { UsagePage } from '@web/pages/usage'
 
 export function App() {
@@ -24,6 +25,7 @@ export function App() {
           <Route path="/report/roster" element={<ReportRosterPage />} />
           <Route path="/report/prefs" element={<ReportPrefsPage />} />
           <Route path="/usage" element={<UsagePage />} />
+          <Route path="/token-plan" element={<TokenPlanPage />} />
           <Route path="/bench" element={<BenchPage />} />
           <Route path="/setting" element={<SettingPage />} />
           <Route path="*" element={<HomePage />} />

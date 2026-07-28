@@ -27,35 +27,6 @@ type AgentUsageStats = {
   tools: ToolUsageRow[]
 }
 
-type QuotaWindow = {
-  label: string
-  remainingPercent: number
-  remainsMs?: number
-  resetAt?: string
-  used?: number
-  total?: number
-}
-
-type UsageModel = {
-  name: string
-  windows: QuotaWindow[]
-  meta?: Record<string, string>
-}
-
-type UsageSnapshot = {
-  provider: string
-  displayName: string
-  fetchedAt: string
-  models: UsageModel[]
-}
-
-type Health = {
-  ok: boolean
-  provider: string
-  hasKey: boolean
-  hint?: string
-}
-
 const PERIODS: { id: UsagePeriod; label: string }[] = [
   { id: 'day', label: '日' },
   { id: 'week', label: '周' },
@@ -69,35 +40,11 @@ function formatTokens(n: number): string {
   return n.toLocaleString('zh-CN')
 }
 
-function formatDuration(ms?: number): string {
-  if (ms == null || Number.isNaN(ms)) return '—'
-  const totalSec = Math.max(0, Math.floor(ms / 1000))
-  const d = Math.floor(totalSec / 86400)
-  const h = Math.floor((totalSec % 86400) / 3600)
-  const m = Math.floor((totalSec % 3600) / 60)
-  const s = totalSec % 60
-  if (d > 0) return `${d}d ${h}h ${m}m`
-  if (h > 0) return `${h}h ${m}m ${s}s`
-  if (m > 0) return `${m}m ${s}s`
-  return `${s}s`
-}
-
-function barTone(pct: number) {
-  if (pct >= 60) return 'bg-success'
-  if (pct >= 30) return 'bg-accent-warm'
-  return 'bg-destructive'
-}
-
 export function UsagePage() {
   const [period, setPeriod] = useState<UsagePeriod>('day')
   const [agent, setAgent] = useState<AgentUsageStats | null>(null)
   const [agentMsg, setAgentMsg] = useState('')
   const [agentBusy, setAgentBusy] = useState(false)
-
-  const [snap, setSnap] = useState<UsageSnapshot | null>(null)
-  const [health, setHealth] = useState<Health | null>(null)
-  const [planMsg, setPlanMsg] = useState('')
-  const [planBusy, setPlanBusy] = useState(false)
 
   async function loadAgent(p: UsagePeriod = period) {
     setAgentBusy(true)
@@ -113,34 +60,10 @@ export function UsagePage() {
     }
   }
 
-  async function loadPlan() {
-    setPlanBusy(true)
-    try {
-      const h = await fetchJson<Health>('/api/usage/health')
-      setHealth(h)
-      if (!h.ok) {
-        setSnap(null)
-        setPlanMsg(h.hint || '未配置 API Key')
-        return
-      }
-      const data = await fetchJson<UsageSnapshot>('/api/usage')
-      setSnap(data)
-      setPlanMsg('')
-    } catch (e) {
-      setSnap(null)
-      setPlanMsg(e instanceof Error ? e.message : String(e))
-    } finally {
-      setPlanBusy(false)
-    }
-  }
-
   useEffect(() => {
     void loadAgent(period)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period])
-
-  useEffect(() => {
-    void loadPlan()
-  }, [])
 
   const maxToolTokens = Math.max(1, ...(agent?.tools.map((t) => t.totalTokens) || [1]))
 
@@ -148,7 +71,7 @@ export function UsagePage() {
     <div className="mx-auto max-w-2xl space-y-10">
       <header className="space-y-1">
         <h1 className="font-display text-2xl font-bold tracking-tight">用量</h1>
-        <p className="text-sm text-muted">本地 Agent 各工具消耗，以及云端 Token Plan 配额。</p>
+        <p className="text-sm text-muted">本地 Agent 各工具消耗。</p>
       </header>
 
       <section className="space-y-4">
@@ -234,78 +157,6 @@ export function UsagePage() {
             )}
           </>
         ) : !agentMsg ? (
-          <p className="text-sm text-muted">加载中…</p>
-        ) : null}
-      </section>
-
-      <section className="space-y-4 border-t border-border/60 pt-8">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="font-display text-lg font-bold tracking-tight">Token Plan</h2>
-            <p className="mt-0.5 text-xs text-muted">
-              {health?.provider || 'minimax'}
-              {snap ? ` · 拉取于 ${new Date(snap.fetchedAt).toLocaleString('zh-CN')}` : ''}
-            </p>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={planBusy}
-            onClick={() => void loadPlan()}
-          >
-            {planBusy ? '刷新中…' : '刷新配额'}
-          </Button>
-        </div>
-
-        {planMsg ? (
-          <p className={`text-sm ${snap ? 'text-muted' : 'text-destructive'}`}>{planMsg}</p>
-        ) : null}
-
-        {snap ? (
-          <div className="space-y-4">
-            {snap.models.map((m) => (
-              <Card key={m.name}>
-                <CardHeader>
-                  <CardTitle>{m.name}</CardTitle>
-                  {m.meta?.boost ? <Badge>{m.meta.boost}</Badge> : null}
-                </CardHeader>
-                <ul className="space-y-4">
-                  {m.windows.map((w) => (
-                    <li key={w.label}>
-                      <div className="mb-1.5 flex items-baseline justify-between gap-2 text-sm">
-                        <span className="font-medium">{w.label}</span>
-                        <span className="tabular-nums text-muted">
-                          {Math.round(w.remainingPercent)}% 剩余
-                        </span>
-                      </div>
-                      <div className="h-2.5 overflow-hidden rounded-full bg-surface">
-                        <div
-                          className={`h-full rounded-full transition-all ${barTone(w.remainingPercent)}`}
-                          style={{
-                            width: `${Math.max(0, Math.min(100, w.remainingPercent))}%`,
-                          }}
-                        />
-                      </div>
-                      <p className="mt-1.5 text-xs text-muted">
-                        {[
-                          w.remainsMs != null ? `还剩 ${formatDuration(w.remainsMs)}` : null,
-                          w.resetAt
-                            ? `重置 ${new Date(w.resetAt).toLocaleString('zh-CN')}`
-                            : null,
-                          w.total && w.total > 0
-                            ? `计数 ${w.used ?? 0}/${w.total}`
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
-            ))}
-          </div>
-        ) : !planMsg ? (
           <p className="text-sm text-muted">加载中…</p>
         ) : null}
       </section>
