@@ -1,24 +1,6 @@
 # toolkit
 
-个人 CLI 工具集，前缀 `tkt`，覆盖 AI 提交、日报、测速等日常高频操作。
-
-## 设计理念
-
-在 Claude Code / Cursor / Codex 等 coding agent 中，用 skill 承载「固定功能的 AI 工具」会带来两个问题：
-
-1. **上下文浪费** — skill 的指令、示例、边界条件全部灌入上下文，还没干活先吃掉几千 token
-2. **不稳定** — 同样的 prompt 跑两次可能有偏差，agent 的「自由度」对确定性操作用错了地方
-
-正确分工：
-
-| | skill | CLI |
-|---|---|---|
-| **角色** | 说明书 | 执行器 |
-| **内容** | 流程规范、注意事项、反模式 | 确定性代码逻辑 |
-| **加载** | 被 agent 读取后执行 | agent 一句 `tkt gc` 直接跑 |
-| **适合** | 需要判断/决策的复杂流程 | 固定输入→固定输出的功能 |
-
-**CLI 做重活，skill 做说明书，agent 做调度。** `tkt` 就是这套思路的实践——把常用 AI 功能（提交分析、日报生成、测速）打包成 CLI，agent 只需一句命令调用，零上下文损耗，结果确定。
+个人 CLI 工具集，前缀 `tkt`，覆盖 AI 提交、日报、测速等日常高频操作。设计思路见 [docs/design.md](docs/design.md)。
 
 ## 安装
 
@@ -183,9 +165,14 @@ tkt bugrelay --add-dir <src>          # 追加 AI 可读源码目录（file:line
 接入（或让 agent 装 `bugrelay-setup` skill 后一句「接入 bugrelay」）：
 
 1. `tkt bugrelay` 起服务
-2. `tkt bugrelay snippet` → 贴目标项目 `index.html` `<head>` 最前（vue-cli `public/index.html` / vite 根 `index.html`，白名单法，生产天然免疫）
+2. 构建配置注入（staging 环境变量门控，生产构建天然免疫）：
+   - **vue-cli**：`vue.config.js` chainWebpack 里 `if (process.env.ENV === 'staging')` 给 html 模板传参，`public/index.html` `<head>` 最前加条件 script
+   - **vite**：`vite.config.ts` 加 `transformIndexHtml` 插件（`apply: 'build'` + `head-prepend`），同样 `process.env.ENV === 'staging'` 门控
+   - 无构建入口的纯静态页兜底：`tkt bugrelay snippet` 取白名单片段
 3. 连通：PC webview 零配置 / Android `adb reverse tcp:9527 tcp:9527` / iOS 页面 URL 加 `?bugrelay_server=http://<PC_IP>:9527`
 4. `tkt bugrelay doctor` + 手机端浮层圆钮变绿验证
+
+注入产物仅一行远程 URL（`<script src="http://127.0.0.1:9527/bugrelay/collector.js">`）：CI/构建机零依赖（不安装、不复制 collector 文件），浏览器打开页面时由**本机** tkt 服务响应 collector 内容并始终最新；`127.0.0.1` 在访问者浏览器上解析，手机端经 `?bugrelay_server=` 覆盖。
 
 分析页：选会话 → 描述问题 → AI 分析（SSE 进度）→ 归属/依据/建议/file:line → 生成 markdown 报告。数据面板（请求瀑布/console/mutation/轨迹）可人工复核。
 
@@ -241,10 +228,4 @@ pnpm build           # → lib/
 pnpm build:all       # web:build 再 build（发布前）
 ```
 
-## 实现概要
-
-- **CLI**：commander；数据落 `~/.config/tkt/<cmd>/`
-- **Agent**：`src/agent/`（Vercel AI SDK + Claude Agent SDK）；tool 步进用 `stopWhen`，工作流多轮用 `runLoop`
-- **Feature**：`src/features/<name>/` 按阶段拆目录；跨模块 `@/*` → `src/*`
-- **Prompt**：一律放 `prompts/`，经目录注册后 `loadPrompt(id)` 加载
-- **UI**：单包 SPA（`web/` → `assets/ui/`），Hono 单端口静态 + SPA fallback；业务 API 按 feature mount
+实现架构见 [docs/design.md](docs/design.md)。
