@@ -176,11 +176,68 @@ async function runInstall(dir: string): Promise<void> {
     return
   }
 
-  console.log(chalk.bold('\n2/2 claude 无头执行接入（claude -p）'))
+  console.log(chalk.bold('\n2/2 claude 无头执行接入（stream-json 进度可见）'))
   const prompt =
     '按项目 .claude/skills/bugrelay-setup/SKILL.md 把当前项目接入 tkt bugrelay：检测构建工具（vue-cli/vite），用 staging 环境变量门控注入 collector，完成后跑 tkt bugrelay doctor 验证。'
   // acceptEdits：无头模式无交互确认，注入需改构建配置/index.html
-  process.exitCode = await run('claude', ['-p', prompt, '--permission-mode', 'acceptEdits'])
+  process.exitCode = await runClaudeHeadless(dir, prompt)
+}
+
+/** stream-json 行 → 简化进度打印：文本直出，工具调用打一行摘要 */
+function printStreamEvent(line: string): void {
+  let evt: {
+    type?: string
+    message?: { content?: Array<{ type?: string; text?: string; name?: string; input?: Record<string, unknown> }> }
+    subtype?: string
+    result?: string
+  }
+  try {
+    evt = JSON.parse(line)
+  } catch {
+    return
+  }
+  if (evt.type === 'assistant') {
+    for (const block of evt.message?.content ?? []) {
+      if (block.type === 'text' && block.text) {
+        console.log(block.text)
+      } else if (block.type === 'tool_use' && block.name) {
+        const input = block.input ?? {}
+        const brief =
+          (typeof input.file_path === 'string' && input.file_path) ||
+          (typeof input.command === 'string' && input.command) ||
+          (typeof input.pattern === 'string' && input.pattern) ||
+          (typeof input.path === 'string' && input.path) ||
+          ''
+        console.log(chalk.dim(`  ⚙ ${block.name}${brief ? ` ${String(brief).slice(0, 120)}` : ''}`))
+      }
+    }
+  } else if (evt.type === 'result') {
+    if (evt.subtype !== 'success') {
+      console.log(chalk.red(`claude 未成功结束：${evt.subtype ?? 'unknown'}`))
+    }
+    if (evt.result) console.log(`\n${evt.result}`)
+  }
+}
+
+function runClaudeHeadless(dir: string, prompt: string): Promise<number> {
+  return new Promise((resolve) => {
+    const child = spawn(
+      'claude',
+      ['-p', prompt, '--permission-mode', 'acceptEdits', '--output-format', 'stream-json', '--verbose'],
+      { cwd: dir, stdio: ['inherit', 'pipe', 'inherit'], shell: process.platform === 'win32' },
+    )
+    let buf = ''
+    child.stdout?.on('data', (chunk: Buffer) => {
+      buf += chunk.toString()
+      const lines = buf.split('\n')
+      buf = lines.pop() ?? ''
+      for (const line of lines) printStreamEvent(line)
+    })
+    child.on('exit', (code) => {
+      if (buf.trim()) printStreamEvent(buf)
+      resolve(code ?? 1)
+    })
+  })
 }
 
 export function registerBugrelayCommands(program: Command): void {
