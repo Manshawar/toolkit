@@ -24,6 +24,7 @@ import { registerUsageCommands } from './features/usage'
 import { registerGitSubmitCommands } from './features/git-submit'
 import { registerAgentCommands } from './features/agent'
 import { registerBenchCommands } from './features/bench'
+import { registerBugrelayCommands } from './features/bugrelay'
 import { registerReportCommands } from './features/report'
 import { runPromptList, runPromptShow } from './features/prompts'
 import { reconfigureAiConfig, saveAiBackend, showAiConfig } from './agent'
@@ -85,6 +86,7 @@ async function main() {
   registerGitSubmitCommands(program)
   registerAgentCommands(program)
   registerBenchCommands(program)
+  registerBugrelayCommands(program)
   registerReportCommands(program)
 
   program

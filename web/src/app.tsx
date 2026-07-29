@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Shell } from '@web/components/shell'
 import { BenchPage } from '@web/pages/bench'
+import { BugrelayPage } from '@web/pages/bugrelay'
 import { HomePage } from '@web/pages/home'
 import { ReportGeneratePage } from '@web/pages/report/generate'
 import { ReportHistoryEditPage } from '@web/pages/report/history-edit'
@@ -27,6 +28,7 @@ export function App() {
           <Route path="/usage" element={<UsagePage />} />
           <Route path="/token-plan" element={<TokenPlanPage />} />
           <Route path="/bench" element={<BenchPage />} />
+          <Route path="/bugrelay" element={<BugrelayPage />} />
           <Route path="/setting" element={<SettingPage />} />
           <Route path="*" element={<HomePage />} />
         </Routes>

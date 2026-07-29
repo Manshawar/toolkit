@@ -28,6 +28,16 @@ npm i @manshawar/tkt -g
 
 发布在 npm public registry，全局安装后即可使用 `tkt` 命令。
 
+### 配套 skill
+
+仓库 `skill/` 目录带 agent skill（接入 SOP，非逻辑），用 [skills CLI](https://github.com/vercel-labs/skills) 安装：
+
+```bash
+npx skills add Manshawar/toolkit
+```
+
+安装后 agent 自动获得 `bugrelay-setup` 等接入说明书；功能逻辑仍在 CLI，skill 零上下文损耗。
+
 ## 配置
 
 首次使用 AI 功能（`tkt gc` / `tkt report` 等）时，会自动弹出交互式配置。也可手动配置：
@@ -78,6 +88,7 @@ Key 也可在 `/token-plan` 页面直接填写，存 `~/.config/tkt/usage/.env`�
 | Usage 偏好 | `~/.config/tkt/usage/prefs.json`（默认 provider） |
 | Usage API Key | `~/.config/tkt/usage/.env`（provider key） |
 | Agent 用量日志 | `~/.config/tkt/usage/agent.jsonl` |
+| Bugrelay 配置 | `~/.config/tkt/bugrelay/setting.json`（add_dirs / 脱敏） |
 
 ## 命令
 
@@ -157,6 +168,27 @@ tkt ui --no-spa           # 仅 API：不挂载 SPA（前端由 Vite 接管）
 
 API 前缀：`/api/report/*`、`/api/usage/*`、`/api/bench/*`、`/api/setting/*`。
 
+### `tkt bugrelay` — AI 辅助 bug 归属分析
+
+被测页面注入 collector（ws 采集日志/请求/异常/Vuex/轨迹），测试在分析页描述问题，Claude 多轮自助拉取数据判定前后端归属，一键生成结构化 bug 报告。
+
+```bash
+tkt bugrelay                          # 启动服务（长驻，固定 :9527，占用报错不顺延）
+tkt bugrelay ui                       # 起服务 + 开分析页 /bugrelay
+tkt bugrelay doctor                   # 自检：端口 / claude CLI / adb / add_dirs / 在线会话
+tkt bugrelay snippet                  # 输出注入 snippet（复制到剪贴板）
+tkt bugrelay --add-dir <src>          # 追加 AI 可读源码目录（file:line 定位，持久化）
+```
+
+接入（或让 agent 装 `bugrelay-setup` skill 后一句「接入 bugrelay」）：
+
+1. `tkt bugrelay` 起服务
+2. `tkt bugrelay snippet` → 贴目标项目 `index.html` `<head>` 最前（vue-cli `public/index.html` / vite 根 `index.html`，白名单法，生产天然免疫）
+3. 连通：PC webview 零配置 / Android `adb reverse tcp:9527 tcp:9527` / iOS 页面 URL 加 `?bugrelay_server=http://<PC_IP>:9527`
+4. `tkt bugrelay doctor` + 手机端浮层圆钮变绿验证
+
+分析页：选会话 → 描述问题 → AI 分析（SSE 进度）→ 归属/依据/建议/file:line → 生成 markdown 报告。数据面板（请求瀑布/console/mutation/轨迹）可人工复核。
+
 ### `tkt usage` — Token 用量
 
 实时查询 AI 平台 Token Plan 配额。
@@ -195,6 +227,7 @@ tkt usage ui              # → /usage（本地 Agent 用量 + Token Plan 双面
 | `KIMI_API_KEY` | Kimi Code API Key（`sk-kimi-...`） |
 | `KIMI_API_BASE` | Kimi API 地址（默认 `https://api.kimi.com`） |
 | `TKT_NO_UPDATE` | 设为 `1` 关闭启动时的版本更新提示 |
+| `BUGRELAY_PORT` | bugrelay 端口覆盖（默认 9527，固定不顺延） |
 | `TKT_GC_PUSH` | git-submit 默认推送开关（`true` / `false`） |
 
 ## 开发与打包

@@ -11,6 +11,7 @@ import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import type { Command } from 'commander'
 import { mountBenchRoutes } from '@/features/bench/routes'
+import { mountBugrelayRoutes } from '@/features/bugrelay/routes'
 import { mountSettingRoutes } from '@/features/setting/routes'
 import { mountReportRoutes } from '@/features/report/routes'
 import { mountUsageRoutes } from '@/features/usage/routes'
@@ -24,6 +25,7 @@ const DEFAULT_PORT = 38471
 
 const mounts: FeatureMount[] = [
   mountBenchRoutes,
+  mountBugrelayRoutes,
   mountSettingRoutes,
   mountReportRoutes,
   mountUsageRoutes,
