@@ -36,6 +36,12 @@ const ATTRIBUTION_META: Record<Analysis['attribution'], { label: string; cls: st
 
 type ProgressEvent = { stage: string; tool?: string; round?: number }
 
+/**
+ * API 基址：tkt bugrelay ui 打开时同源（''）；tkt ui（38471）/ vite dev 打开时
+ * 数据在 9527 服务进程里（会话为进程内 Map，不互通），跨域直连 9527（CORS 已全开）
+ */
+const BR_ORIGIN = location.port === '9527' ? '' : 'http://127.0.0.1:9527'
+
 function stageText(e: ProgressEvent): string {
   if (e.stage === 'snapshot') return '正在拉取页面快照…'
   if (e.stage === 'analyzing') return 'AI 分析中…'
@@ -44,6 +50,9 @@ function stageText(e: ProgressEvent): string {
 }
 
 export function BugrelayPage() {
+  const [serviceUp, setServiceUp] = useState<boolean | null>(null)
+  const [serviceBusy, setServiceBusy] = useState(false)
+  const [serviceMsg, setServiceMsg] = useState('')
   const [sessions, setSessions] = useState<SessionItem[]>([])
   const [listError, setListError] = useState('')
   const [activeId, setActiveId] = useState('')
@@ -64,9 +73,47 @@ export function BugrelayPage() {
   const activeRef = useRef(activeId)
   activeRef.current = activeId
 
+  // 服务探测：直连 9527 health，挂了出遮罩
+  useEffect(() => {
+    let dead = false
+    const probe = async () => {
+      try {
+        const res = await fetch(`${BR_ORIGIN}/bugrelay/api/health`, { signal: AbortSignal.timeout(2500) })
+        if (!dead) setServiceUp(res.ok)
+      } catch {
+        if (!dead) setServiceUp(false)
+      }
+    }
+    void probe()
+    const timer = setInterval(() => void probe(), 3000)
+    return () => {
+      dead = true
+      clearInterval(timer)
+    }
+  }, [])
+
+  // 开关：请求相对路径（tkt ui 服务端 spawn/kill；9527 页面上 start 为 no-op）
+  async function toggleService(action: 'start' | 'stop') {
+    setServiceBusy(true)
+    setServiceMsg(action === 'start' ? '启动中…' : '停止中…')
+    try {
+      const data = await fetchJson<{ up: boolean; port: number }>('/bugrelay/api/service', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      setServiceUp(data.up)
+      setServiceMsg('')
+    } catch (e) {
+      setServiceMsg(e instanceof Error ? e.message : String(e))
+    } finally {
+      setServiceBusy(false)
+    }
+  }
+
   const loadSessions = useCallback(async () => {
     try {
-      const data = await fetchJson<{ sessions: SessionItem[] }>('/bugrelay/api/sessions')
+      const data = await fetchJson<{ sessions: SessionItem[] }>(`${BR_ORIGIN}/bugrelay/api/sessions`)
       setSessions(data.sessions)
       setListError('')
       // 首次自动选中第一个在线会话
@@ -80,10 +127,11 @@ export function BugrelayPage() {
   }, [])
 
   useEffect(() => {
+    if (!serviceUp) return
     void loadSessions()
     const timer = setInterval(() => void loadSessions(), 3000)
     return () => clearInterval(timer)
-  }, [loadSessions])
+  }, [loadSessions, serviceUp])
 
   const active = sessions.find((s) => s.sessionId === activeId)
 
@@ -92,7 +140,7 @@ export function BugrelayPage() {
     setSnapshotMsg('拉取中…')
     try {
       const data = await fetchJson<{ snapshot: Snapshot; snapshotAt: number }>(
-        `/bugrelay/api/snapshot?sessionId=${encodeURIComponent(activeId)}&pull=1&full=1`,
+        `${BR_ORIGIN}/bugrelay/api/snapshot?sessionId=${encodeURIComponent(activeId)}&pull=1&full=1`,
       )
       setSnapshot(data.snapshot)
       setSnapshotAt(data.snapshotAt)
@@ -110,7 +158,7 @@ export function BugrelayPage() {
     setReport('')
     setProgress('连接分析服务…')
     try {
-      const res = await fetch('/bugrelay/api/analyze', {
+      const res = await fetch(`${BR_ORIGIN}/bugrelay/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: activeId, question: question.trim() }),
@@ -130,7 +178,7 @@ export function BugrelayPage() {
       })
       // 分析结束顺手刷新数据面板
       void fetchJson<{ snapshot: Snapshot; snapshotAt: number }>(
-        `/bugrelay/api/snapshot?sessionId=${encodeURIComponent(activeId)}&full=1`,
+        `${BR_ORIGIN}/bugrelay/api/snapshot?sessionId=${encodeURIComponent(activeId)}&full=1`,
       )
         .then((d) => {
           setSnapshot(d.snapshot)
@@ -148,7 +196,7 @@ export function BugrelayPage() {
   async function buildReport() {
     if (!activeId || !analysis) return
     try {
-      const data = await fetchJson<{ markdown: string }>('/bugrelay/api/report', {
+      const data = await fetchJson<{ markdown: string }>(`${BR_ORIGIN}/bugrelay/api/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: activeId, question: question.trim(), analysis }),
@@ -171,18 +219,54 @@ export function BugrelayPage() {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
+    <div className="relative">
+      {serviceUp === false ? (
+        <div className="absolute inset-0 z-20 flex items-start justify-center rounded-xl bg-background/80 pt-24 backdrop-blur-sm">
+          <Card className="w-80 text-center">
+            <CardHeader>
+              <CardTitle>bugrelay 服务未启动</CardTitle>
+              <Badge className="bg-muted/20 text-muted">:9527 离线</Badge>
+            </CardHeader>
+            <p className="text-sm leading-relaxed text-muted">
+              采集 / ws / AI 分析都在 :9527 服务进程里。可点下方按钮启动，或终端跑{' '}
+              <code className="text-xs">tkt bugrelay</code>。
+            </p>
+            <div className="mt-4">
+              <Button onClick={() => void toggleService('start')} disabled={serviceBusy}>
+                {serviceBusy ? '启动中…' : '启动服务'}
+              </Button>
+            </div>
+            {serviceMsg ? <p className="mt-3 text-xs text-destructive">{serviceMsg}</p> : null}
+          </Card>
+        </div>
+      ) : null}
+      <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
       {/* 左栏：在线会话 */}
       <Card className="h-fit lg:sticky lg:top-24">
         <CardHeader>
           <CardTitle>会话</CardTitle>
-          <span className="text-xs text-muted">{sessions.filter((s) => s.online).length} 在线</span>
+          <button
+            type="button"
+            onClick={() => void toggleService(serviceUp ? 'stop' : 'start')}
+            disabled={serviceBusy || serviceUp === null}
+            title={serviceUp ? '点击停止 :9527 服务' : '点击启动 :9527 服务'}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs transition-colors',
+              serviceUp
+                ? 'border-[#67c23a]/40 bg-[#67c23a]/10 text-[#67c23a] hover:bg-[#67c23a]/20'
+                : 'border-border/60 text-muted hover:bg-surface/70',
+            )}
+          >
+            <span className={cn('size-1.5 rounded-full', serviceUp ? 'bg-[#67c23a]' : 'bg-muted/50')} />
+            {serviceUp === null ? '探测中' : serviceUp ? '服务中' : '已停止'}
+          </button>
         </CardHeader>
+        <span className="text-xs text-muted">{sessions.filter((s) => s.online).length} 在线</span>
         {listError ? <p className="text-sm text-destructive">{listError}</p> : null}
         {!sessions.length && !listError ? (
           <p className="text-sm leading-relaxed text-muted">
-            暂无会话。目标页面贴入 snippet 后自动上线（
-            <code className="text-xs">tkt bugrelay snippet</code>）。
+            暂无会话。目标项目按 <code className="text-xs">bugrelay-setup</code> skill 完成 staging
+            注入后，打开页面自动上线。
           </p>
         ) : null}
         <ul className="space-y-1.5">
@@ -313,6 +397,7 @@ export function BugrelayPage() {
             </p>
           )}
         </Card>
+      </div>
       </div>
     </div>
   )

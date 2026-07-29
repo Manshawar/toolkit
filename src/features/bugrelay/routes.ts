@@ -32,6 +32,7 @@ import {
   type PageInfo,
 } from './session'
 import { readSettings, saveSettings, addSourceDir } from './settings'
+import { isServiceUp, startService, stopService, servicePort } from './service'
 import { buildSnippet, lanIp, DEFAULT_BUGRELAY_PORT } from './snippet'
 
 function collectorJs(c: Context) {
@@ -181,6 +182,29 @@ function createBugrelayApiRoutes(): Hono {
   app.get('/snippet', (c) => {
     const port = Number(process.env.BUGRELAY_PORT) || DEFAULT_BUGRELAY_PORT
     return c.json({ snippet: buildSnippet(port), lanIp: lanIp(), port })
+  })
+
+  // 服务开关：供 tkt ui 页面控制 9527（挂在共享路由，ui 与 bugrelay 服务都暴露；9527 上 start 为 no-op）
+  app.get('/service/status', async (c) => {
+    const port = servicePort()
+    return c.json({ port, up: await isServiceUp(port) })
+  })
+
+  app.post('/service', async (c) => {
+    const body = (await c.req.json().catch(() => ({}))) as { action?: string }
+    const port = servicePort()
+    try {
+      if (body.action === 'start') {
+        await startService(port)
+      } else if (body.action === 'stop') {
+        await stopService(port)
+      } else {
+        return c.json({ error: 'action 须为 start | stop' }, 400)
+      }
+      return c.json({ ok: true, port, up: await isServiceUp(port) })
+    } catch (e) {
+      return c.json({ error: e instanceof Error ? e.message : String(e) }, 502)
+    }
   })
 
   return app
