@@ -169,7 +169,7 @@ async function runInstall(dir: string): Promise<void> {
   console.log(chalk.bold('1/2 安装 bugrelay-setup skill 到项目 .claude/skills（npx skills add）'))
   // 不加 -g：项目级安装（缺省自动检测），claude 优先读项目 .claude/skills 而非全局旧副本
   if (
-    (await run('npx', ['-y', 'skills', 'add', 'Manshawar/toolkit', '-s', 'bugrelay-setup', '-a', 'claude', '-y'])) !== 0
+    (await run('npx', ['-y', 'skills', 'add', 'Manshawar/toolkit', '-s', 'bugrelay-setup', '-a', 'claude-code', '-y'])) !== 0
   ) {
     console.error(chalk.red('skill 安装失败，接入中止'))
     process.exitCode = 1
