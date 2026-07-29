@@ -9,6 +9,7 @@
  *   tkt bugrelay ui         起服务 + 开浏览器 /bugrelay
  *   tkt bugrelay doctor     自检：端口 / claude / adb / 在线会话
  *   tkt bugrelay snippet    输出注入 snippet（含局域网 IP），复制到剪贴板
+ *   tkt bugrelay install    项目内一键接入：npx skills add 装 skill + claude 执行注入
  */
 import { createServer } from 'node:net'
 import { spawn, execFile } from 'node:child_process'
@@ -155,6 +156,33 @@ async function runDoctor(port: number): Promise<void> {
   }
 }
 
+async function runInstall(dir: string): Promise<void> {
+  // 两步：装 skill → 让 claude 按 skill 执行接入
+  const run = (cmd: string, args: string[]) =>
+    new Promise<number>((resolve) => {
+      spawn(cmd, args, { cwd: dir, stdio: 'inherit', shell: process.platform === 'win32' }).on(
+        'exit',
+        (code) => resolve(code ?? 1),
+      )
+    })
+
+  console.log(chalk.bold('1/2 安装 bugrelay-setup skill 到项目 .claude/skills（npx skills add）'))
+  // 不加 -g：项目级安装（缺省自动检测），claude 优先读项目 .claude/skills 而非全局旧副本
+  if (
+    (await run('npx', ['-y', 'skills', 'add', 'Manshawar/toolkit', '-s', 'bugrelay-setup', '-a', 'claude', '-y'])) !== 0
+  ) {
+    console.error(chalk.red('skill 安装失败，接入中止'))
+    process.exitCode = 1
+    return
+  }
+
+  console.log(chalk.bold('\n2/2 claude 无头执行接入（claude -p）'))
+  const prompt =
+    '按项目 .claude/skills/bugrelay-setup/SKILL.md 把当前项目接入 tkt bugrelay：检测构建工具（vue-cli/vite），用 staging 环境变量门控注入 collector，完成后跑 tkt bugrelay doctor 验证。'
+  // acceptEdits：无头模式无交互确认，注入需改构建配置/index.html
+  process.exitCode = await run('claude', ['-p', prompt, '--permission-mode', 'acceptEdits'])
+}
+
 export function registerBugrelayCommands(program: Command): void {
   const bugrelay = program
     .command('bugrelay')
@@ -189,6 +217,14 @@ export function registerBugrelayCommands(program: Command): void {
     .option('--port <n>', '端口（默认 9527）')
     .action(async (opts: { port?: string }) => {
       await runDoctor(resolvePort(opts.port))
+    })
+
+  bugrelay
+    .command('install')
+    .description('在目标项目内一键接入：装 bugrelay-setup skill 并启动 claude 执行注入')
+    .option('--dir <path>', '目标项目目录（默认当前目录）')
+    .action(async (opts: { dir?: string }) => {
+      await runInstall(opts.dir ? String(opts.dir) : process.cwd())
     })
 
   bugrelay

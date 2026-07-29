@@ -12,7 +12,7 @@ npm i @manshawar/tkt -g
 
 ### 配套 skill
 
-仓库 `skill/` 目录带 agent skill（接入 SOP，非逻辑），用 [skills CLI](https://github.com/vercel-labs/skills) 安装：
+仓库 `skills/` 目录带 agent skill（接入 SOP，非逻辑），用 [skills CLI](https://github.com/vercel-labs/skills) 安装：
 
 ```bash
 npx skills add Manshawar/toolkit
@@ -159,10 +159,13 @@ tkt bugrelay                          # 启动服务（长驻，固定 :9527，�
 tkt bugrelay ui                       # 起服务 + 开分析页 /bugrelay
 tkt bugrelay doctor                   # 自检：端口 / claude CLI / adb / add_dirs / 在线会话
 tkt bugrelay snippet                  # 输出注入 snippet（复制到剪贴板）
+tkt bugrelay install                  # 目标项目内一键接入：装 skill + claude 自动注入
 tkt bugrelay --add-dir <src>          # 追加 AI 可读源码目录（file:line 定位，持久化）
 ```
 
-接入（或让 agent 装 `bugrelay-setup` skill 后一句「接入 bugrelay」）：
+最省事接入：在目标项目根目录跑 `tkt bugrelay install` —— 自动 `npx skills add Manshawar/toolkit` 装 `bugrelay-setup` skill，随后启动 claude 按 skill 完成注入与验证。
+
+手动接入（或让 agent 装 `bugrelay-setup` skill 后一句「接入 bugrelay」）：
 
 1. `tkt bugrelay` 起服务
 2. 构建配置注入（staging 环境变量门控，生产构建天然免疫）：

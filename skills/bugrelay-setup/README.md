@@ -4,6 +4,16 @@
 
 ## 安装
 
+一键接入（推荐）：在目标项目根目录跑
+
+```bash
+tkt bugrelay install
+```
+
+自动执行本 README 的 skill 安装 + 启动 claude 按 skill 完成注入。
+
+手动装 skill：
+
 ```bash
 npx skills add Manshawar/toolkit
 ```
