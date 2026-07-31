@@ -34,20 +34,31 @@ const ATTRIBUTION_META: Record<Analysis['attribution'], { label: string; cls: st
   uncertain: { label: '待定位', cls: 'bg-muted/30 text-muted' },
 }
 
-type ProgressEvent = { stage: string; tool?: string; round?: number }
+type ProgressEvent = { stage: string; tool?: string; round?: number; detail?: string; text?: string }
+
+type Step = { id: number; kind: 'stage' | 'tool' | 'thinking'; label: string }
+
+let stepSeq = 0
+
+function toStep(e: ProgressEvent): Step | null {
+  if (e.stage === 'snapshot') return { id: ++stepSeq, kind: 'stage', label: '拉取页面快照…' }
+  if (e.stage === 'analyzing') return { id: ++stepSeq, kind: 'stage', label: 'AI 分析中（可多轮自助拉取数据）…' }
+  if (e.stage === 'tool') {
+    return {
+      id: ++stepSeq,
+      kind: 'tool',
+      label: `#${e.round} ${e.tool}${e.detail ? ` · ${e.detail}` : ''}`,
+    }
+  }
+  if (e.stage === 'thinking' && e.text) return { id: ++stepSeq, kind: 'thinking', label: e.text }
+  return null
+}
 
 /**
  * API 基址：tkt bugrelay ui 打开时同源（''）；tkt ui（38471）/ vite dev 打开时
  * 数据在 9527 服务进程里（会话为进程内 Map，不互通），跨域直连 9527（CORS 已全开）
  */
 const BR_ORIGIN = location.port === '9527' ? '' : 'http://127.0.0.1:9527'
-
-function stageText(e: ProgressEvent): string {
-  if (e.stage === 'snapshot') return '正在拉取页面快照…'
-  if (e.stage === 'analyzing') return 'AI 分析中…'
-  if (e.stage === 'tool') return `AI 自助拉取 #${e.round}（${e.tool}）…`
-  return ''
-}
 
 export function BugrelayPage() {
   const [serviceUp, setServiceUp] = useState<boolean | null>(null)
@@ -59,7 +70,7 @@ export function BugrelayPage() {
   const [question, setQuestion] = useState('')
 
   const [busy, setBusy] = useState(false)
-  const [progress, setProgress] = useState('')
+  const [steps, setSteps] = useState<Step[]>([])
   const [analyzeError, setAnalyzeError] = useState('')
   const [analysis, setAnalysis] = useState<Analysis | null>(null)
 
@@ -156,7 +167,7 @@ export function BugrelayPage() {
     setAnalyzeError('')
     setAnalysis(null)
     setReport('')
-    setProgress('连接分析服务…')
+    setSteps([{ id: ++stepSeq, kind: 'stage', label: '连接分析服务…' }])
     try {
       const res = await fetch(`${BR_ORIGIN}/bugrelay/api/analyze`, {
         method: 'POST',
@@ -169,10 +180,12 @@ export function BugrelayPage() {
       }
       await readSse(res, (event, raw) => {
         const data = raw as ProgressEvent & { analysis?: Analysis; error?: string }
-        if (event === 'progress') setProgress(stageText(data))
+        if (event === 'progress') {
+          const step = toStep(data)
+          if (step) setSteps((prev) => [...prev.slice(-49), step])
+        }
         if (event === 'done' && data.analysis) {
           setAnalysis(data.analysis)
-          setProgress('')
         }
         if (event === 'error') setAnalyzeError(data.error ?? '分析失败')
       })
@@ -189,7 +202,6 @@ export function BugrelayPage() {
       setAnalyzeError(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
-      setProgress('')
     }
   }
 
@@ -334,11 +346,44 @@ export function BugrelayPage() {
             <Button variant="secondary" onClick={() => void pullSnapshot()} disabled={!active?.online}>
               刷新数据
             </Button>
-            {progress ? <span className="text-sm text-muted">{progress}</span> : null}
+            {busy ? <span className="text-sm text-muted">分析进行中，过程见下方…</span> : null}
             {active && !active.online ? (
               <span className="text-sm text-destructive">页面已离线，无法分析</span>
             ) : null}
           </div>
+          {steps.length ? (
+            <div
+              ref={(el) => {
+                el?.scrollTo({ top: el.scrollHeight })
+              }}
+              className="mt-3 max-h-56 overflow-y-auto rounded-lg border border-border/60 bg-surface/40 p-3"
+            >
+              <ul className="space-y-1.5">
+                {steps.map((s, i) => {
+                  const latest = i === steps.length - 1 && busy
+                  return (
+                    <li key={s.id} className="flex gap-2 text-xs leading-relaxed">
+                      <span
+                        className={cn(
+                          'mt-1.5 size-1.5 shrink-0 rounded-full',
+                          s.kind === 'tool' ? 'bg-primary' : s.kind === 'thinking' ? 'bg-muted/50' : 'bg-[#67c23a]',
+                          latest && 'animate-pulse',
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          s.kind === 'thinking' ? 'whitespace-pre-wrap text-muted' : 'text-foreground/90',
+                          s.kind === 'tool' && 'font-mono',
+                        )}
+                      >
+                        {s.label}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          ) : null}
           {analyzeError ? <p className="mt-3 text-sm text-destructive">{analyzeError}</p> : null}
         </Card>
 

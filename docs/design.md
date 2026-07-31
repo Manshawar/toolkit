@@ -26,4 +26,4 @@
 
 ## 专题方案
 
-- [bugrelay 落地方案](../bugrelay-落地方案.md)
+- [bugrelay 独立服务方案](bugrelay-独立服务方案.md)（**最终方案**：独立服务 + 按人开关 + MCP 三入口）

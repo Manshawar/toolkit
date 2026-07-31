@@ -27,7 +27,7 @@ export const analysisSchema = z.object({
 export type AnalysisResult = z.infer<typeof analysisSchema>
 
 export interface AnalyzeProgress {
-  (event: { stage: 'snapshot' | 'analyzing' | 'tool' | 'done' | 'error'; [k: string]: unknown }): void
+  (event: { stage: 'snapshot' | 'analyzing' | 'tool' | 'thinking' | 'done' | 'error'; [k: string]: unknown }): void
 }
 
 /** zod → CLI --json-schema（剥 draft 2020-12 $schema，CLI 端 ajv 无此 meta） */
@@ -339,10 +339,24 @@ async function runClaudeAnalysis(opts: {
       if (msg.type === 'assistant') {
         const blocks = (msg.message?.content ?? []) as unknown[]
         for (const b of blocks) {
-          const block = b as { type?: string; name?: string }
+          const block = b as { type?: string; name?: string; text?: string; input?: Record<string, unknown> }
           if (block.type === 'tool_use' && typeof block.name === 'string') {
             toolRounds += 1
-            emit({ stage: 'tool', tool: block.name.replace(/^mcp__bugrelay__/, ''), round: toolRounds })
+            const input = block.input ?? {}
+            const detail =
+              (typeof input.file_path === 'string' && input.file_path) ||
+              (typeof input.pattern === 'string' && input.pattern) ||
+              (typeof input.query === 'string' && input.query) ||
+              ''
+            emit({
+              stage: 'tool',
+              tool: block.name.replace(/^mcp__bugrelay__/, ''),
+              round: toolRounds,
+              detail: String(detail).slice(0, 120),
+            })
+          } else if (block.type === 'text' && typeof block.text === 'string' && block.text.trim()) {
+            // 思考/推理文本截断透出，页面步骤流展示（防长文刷屏）
+            emit({ stage: 'thinking', text: block.text.trim().slice(0, 300) })
           }
         }
       }
