@@ -30,13 +30,6 @@ export const FEATURE_ROUTES = [
     desc: '对比模型首包与总耗时，定时探测看稳定性。',
     hint: 'Bench',
   },
-  {
-    href: '/bugrelay',
-    label: '归属',
-    title: 'Bug 归属分析',
-    desc: '采集页面日志/请求/Vuex，AI 判定前后端归属并出报告。',
-    hint: 'Bugrelay',
-  },
 ] as const
 
 /** 通用配置：放在头部，不随功能膨胀 */
